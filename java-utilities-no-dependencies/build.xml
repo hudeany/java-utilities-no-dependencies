@@ -6,6 +6,8 @@
 	  </classpath>
 	</taskdef>
 	
+	<property name="version" value="2.1.0" />
+	
 	<property name="buildPath" value="build" />
 	<echo message="buildPath: ${buildPath}" />
 	
@@ -14,10 +16,21 @@
 	<target name="clean">
 		<delete dir="${buildPath}" />
 	</target>
+	
+	<target name="compile" description="Compile source">
+        <mkdir dir="bin" />
+		
+        <javac srcdir="src" includes="**" destdir="bin"/>
+    </target>
 
-	<target name="create_jar">
-		<jar destfile="${buildPath}/JavaUtilities_2.1.0.jar">
+	<target name="create_jar" depends="compile">
+		<jar destfile="${buildPath}/JavaUtilities_${version}.jar">
 			<fileset dir="bin" />
+		</jar>
+		
+		<jar destfile="${buildPath}/JavaUtilities_${version}_sources.jar">
+			<fileset dir="bin" />
+		    <fileset dir="src" includes="**/*.java"/>
 		</jar>
 	</target>
 </project>
