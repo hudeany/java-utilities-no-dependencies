@@ -5,7 +5,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
@@ -13,7 +12,7 @@ import java.util.List;
 /**
  * The Class CsvWriter.
  */
-public class CsvWriter extends Writer {
+public class CsvWriter implements Closeable {
 
 	/** Default output encoding. */
 	public static final String DEFAULT_ENCODING = "UTF-8";
@@ -442,29 +441,11 @@ public class CsvWriter extends Writer {
 	}
 
 	/**
-	 * Not supported method to write data (must implement for writer interface).
-	 *
-	 * @param cbuf
-	 *            the cbuf
-	 * @param off
-	 *            the off
-	 * @param len
-	 *            the len
-	 * @throws IOException
-	 *             Signals that an I/O exception has occurred.
-	 */
-	@Override
-	public void write(char[] cbuf, int off, int len) throws IOException {
-		throw new IOException("Write by offset and length is not supported by " + getClass().getSimpleName());
-	}
-
-	/**
 	 * Flush buffered data.
 	 *
 	 * @throws IOException
 	 *             Signals that an I/O exception has occurred.
 	 */
-	@Override
 	public void flush() throws IOException {
 		if (outputWriter != null) {
 			outputWriter.flush();

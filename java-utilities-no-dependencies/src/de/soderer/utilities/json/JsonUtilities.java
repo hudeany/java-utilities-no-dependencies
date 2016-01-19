@@ -2,7 +2,6 @@ package de.soderer.utilities.json;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -14,72 +13,6 @@ import org.w3c.dom.Node;
 import de.soderer.utilities.Utilities;
 
 public class JsonUtilities {
-	public static JsonObject parseJsonData(String jsonDataString, boolean throwExceptionOnError) throws Exception {
-		try {
-			char[] jsonData = jsonDataString.toCharArray();
-			int startIndex = 0;
-			for (startIndex = 0; startIndex < jsonData.length; startIndex++) {
-				if (Character.isWhitespace(jsonData[startIndex])) {
-					// do nothing
-				} else if (jsonData[startIndex] == '{') {
-					break;
-				} else {
-					throw new Exception("Unexpected '" + jsonData[startIndex] + "'-sign at index " + startIndex);
-				}
-			}
-
-			JsonObject jsonObject = new JsonObject();
-			int endIndexOfObject = jsonObject.parse(jsonData, startIndex + 1) + 1;
-			if (endIndexOfObject < jsonData.length) {
-				for (int index = endIndexOfObject; index < jsonData.length; index++) {
-					if (!Character.isWhitespace(jsonData[index])) {
-						throw new Exception("Unexpected '" + jsonData[index] + "'-sign at index " + index);
-					}
-				}
-			}
-
-			return jsonObject;
-		} catch (Exception e) {
-			if (throwExceptionOnError) {
-				throw new Exception("Invalid JSON data", e);
-			} else {
-				return null;
-			}
-		}
-	}
-
-	public static boolean isValidUnfinishedJsonValue(String value) {
-		if ("t".equalsIgnoreCase(value) || "tr".equalsIgnoreCase(value) || "tru".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value)) {
-			return true;
-		} else if ("f".equalsIgnoreCase(value) || "fa".equalsIgnoreCase(value) || "fal".equalsIgnoreCase(value) || "fals".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
-			return true;
-		} else if ("n".equalsIgnoreCase(value) || "nu".equalsIgnoreCase(value) || "nul".equalsIgnoreCase(value) || "null".equalsIgnoreCase(value)) {
-			return true;
-		} else if (Pattern.matches("[+|-]?[0-9]*(\\.[0-9]*)?([e|E][+|-]?[0-9]*)?", value)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public static Object getJsonValue(String value) throws Exception {
-		if ("true".equalsIgnoreCase(value)) {
-			return true;
-		} else if ("false".equalsIgnoreCase(value)) {
-			return false;
-		} else if ("null".equalsIgnoreCase(value)) {
-			return null;
-		} else if (Pattern.matches("[+|-]?[0-9]*(\\.[0-9]*)?([e|E][+|-]?[0-9]*)?", value)) {
-			if (value.contains(".")) {
-				return new Double(value);
-			} else {
-				return new Long(value);
-			}
-		} else {
-			throw new Exception("Invalid value");
-		}
-	}
-
 	public static JsonObject convertXmlDocument(Document xmlDocument, boolean throwExceptionOnError) throws Exception {
 		try {
 			JsonObject jsonObject = new JsonObject();

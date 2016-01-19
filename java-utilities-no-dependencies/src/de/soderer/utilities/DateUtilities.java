@@ -13,23 +13,34 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 public class DateUtilities {
-	public static SimpleDateFormat DD_MM_YYYY_HH_MM_SS = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-	public static SimpleDateFormat DD_MM_YYYY_HH_MM_SS_Z = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss z");
-	public static SimpleDateFormat DD_MM_YYYY_HH_MM = new SimpleDateFormat("dd.MM.yyyy HH:mm");
-	public static SimpleDateFormat DDMMYYYY = new SimpleDateFormat("ddMMyyyy");
-	public static SimpleDateFormat YYYYMMDD = new SimpleDateFormat("yyyyMMdd");
-	public static SimpleDateFormat HHMMSS = new SimpleDateFormat("HHmmss");
-	public static SimpleDateFormat YYYY_MM_DD = new SimpleDateFormat("yyyy-MM-dd");
-	public static SimpleDateFormat EE_DD_MM_YYYY = new SimpleDateFormat("EE dd.MM.yyyy", Locale.GERMAN); // EE => Weekday
-	public static SimpleDateFormat DD_MM_YYYY_HH_MM_SS_ForFileName = new SimpleDateFormat("dd_MM_yyyy_HH_mm_ss");
-	public static SimpleDateFormat YYYYMMDDHHMMSS = new SimpleDateFormat("yyyyMMddHHmmss");
-	public static SimpleDateFormat YYYY_MM_DD_HHMMSS = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	public static SimpleDateFormat YYYYMMDD_HHMMSS = new SimpleDateFormat("yyyyMMdd-HHmmss");
-	public static SimpleDateFormat HHMM = new SimpleDateFormat("HHmm");
-	public static SimpleDateFormat DD_MMM_YYYY_ENG = new SimpleDateFormat("dd-MMM-yy", Locale.ENGLISH);
-	public static SimpleDateFormat DD_MMM_YYYY_GER = new SimpleDateFormat("dd-MMM-yy", Locale.GERMAN);
-	public static SimpleDateFormat MMM_D_HHMM = new SimpleDateFormat("MMM d HH:mm", Locale.ENGLISH);
-	public static SimpleDateFormat MMM_D_YYYY = new SimpleDateFormat("MMM d yyyy", Locale.ENGLISH);
+	public static final SimpleDateFormat DD_MM_YYYY_HH_MM_SS = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+	public static final SimpleDateFormat DD_MM_YYYY_HH_MM_SS_Z = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss z");
+	public static final SimpleDateFormat DD_MM_YYYY_HH_MM = new SimpleDateFormat("dd.MM.yyyy HH:mm");
+	public static final SimpleDateFormat DD_MM_YYYY = new SimpleDateFormat("dd.MM.yyyy");
+	public static final SimpleDateFormat DDMMYYYY = new SimpleDateFormat("ddMMyyyy");
+	public static final SimpleDateFormat YYYYMMDD = new SimpleDateFormat("yyyyMMdd");
+	public static final SimpleDateFormat HHMMSS = new SimpleDateFormat("HHmmss");
+	public static final SimpleDateFormat YYYY_MM_DD = new SimpleDateFormat("yyyy-MM-dd");
+	public static final SimpleDateFormat YYYY_MM_DD_HH_MM = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+	public static final SimpleDateFormat EE_DD_MM_YYYY = new SimpleDateFormat("EE dd.MM.yyyy", Locale.GERMAN); // EE => Weekday
+	public static final SimpleDateFormat DD_MM_YYYY_HH_MM_SS_ForFileName = new SimpleDateFormat("dd_MM_yyyy_HH_mm_ss");
+	public static final SimpleDateFormat YYYYMMDDHHMMSS = new SimpleDateFormat("yyyyMMddHHmmss");
+	public static final SimpleDateFormat YYYY_MM_DD_HHMMSS = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	public static final SimpleDateFormat YYYYMMDD_HHMMSS = new SimpleDateFormat("yyyyMMdd-HHmmss");
+	public static final SimpleDateFormat HHMM = new SimpleDateFormat("HHmm");
+	public static final SimpleDateFormat DD_MMM_YYYY_ENG = new SimpleDateFormat("dd-MMM-yy", Locale.ENGLISH);
+	public static final SimpleDateFormat DD_MMM_YYYY_GER = new SimpleDateFormat("dd-MMM-yy", Locale.GERMAN);
+	public static final SimpleDateFormat MMM_D_HHMM = new SimpleDateFormat("MMM d HH:mm", Locale.ENGLISH);
+	public static final SimpleDateFormat MMM_D_YYYY = new SimpleDateFormat("MMM d yyyy", Locale.ENGLISH);
+
+	/** Date format for SOAP Webservices (ISO 8601) */
+	public static final SimpleDateFormat ISO_8601_DATE_FORMAT_NO_TIMEZONE = new SimpleDateFormat("yyyy-MM-dd");
+	/** Date format for SOAP Webservices (ISO 8601) */
+	public static final SimpleDateFormat ISO_8601_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-ddX");
+	/** DateTime format for SOAP Webservices (ISO 8601) */
+	public static final SimpleDateFormat ISO_8601_DATETIME_FORMAT_NO_TIMEZONE = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+	/** DateTime format for SOAP Webservices (ISO 8601) */
+	public static final SimpleDateFormat ISO_8601_DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
 
 	public static String getWochenTagNamensKuerzel(GregorianCalendar datum) {
 		int tagesInt = datum.get(Calendar.DAY_OF_WEEK);
@@ -595,4 +606,73 @@ public class DateUtilities {
 		}
 		return false;
 	}
+    
+    public static Date parseUnknownDateFormat(String value) throws Exception {
+		try {
+			return DD_MM_YYYY_HH_MM_SS.parse(value);
+		} catch (ParseException e1) {
+			try {
+				return DD_MM_YYYY_HH_MM.parse(value);
+			} catch (ParseException e2) {
+				try {
+					return DD_MM_YYYY.parse(value);
+				} catch (ParseException e3) {
+					try {
+						return YYYY_MM_DD_HH_MM.parse(value);
+					} catch (ParseException e4) {
+						try {
+							return YYYYMMDDHHMMSS.parse(value);
+						} catch (ParseException e5) {
+							try {
+								return DDMMYYYY.parse(value);
+							} catch (ParseException e6) {
+								throw new Exception("Unknown date format");
+							}
+						}
+					}
+				}
+			}
+		}
+    }
+
+    /**
+     * Parse DateTime strings for SOAP Webservices (ISO 8601)
+     * 
+     * @param dateValue
+     * @return
+     * @throws Exception
+     */
+    public static Date parseIso8601DateTimeString(String dateValue) throws Exception {
+    	if (Utilities.isBlank(dateValue)) {
+    		return null;
+    	}
+    	
+    	dateValue = dateValue.toUpperCase();
+    	
+    	if (dateValue.endsWith("Z")) {
+    		// Standardize UTC time
+    		dateValue = dateValue.replace("Z", "+00:00");
+    	}
+    	
+    	boolean hasTimezone = false;
+    	if (dateValue.length() > 6 && dateValue.charAt(dateValue.length() - 3) == ':' && (dateValue.charAt(dateValue.length() - 6) == '+' || dateValue.charAt(dateValue.length() - 6) == '-')) {
+    		hasTimezone = true;
+    	}
+    	
+    	if (dateValue.contains("T")) {
+    		// Date with time
+    		if (hasTimezone) {
+    			return ISO_8601_DATETIME_FORMAT.parse(dateValue);
+    		} else {
+    			return ISO_8601_DATETIME_FORMAT_NO_TIMEZONE.parse(dateValue);
+    		}
+    	} else {
+    		// Date only
+    		if (hasTimezone) {
+    			return ISO_8601_DATE_FORMAT.parse(dateValue);
+    		} else {
+    			return ISO_8601_DATE_FORMAT_NO_TIMEZONE.parse(dateValue);
+    		}
+    	}
+    }
 }
