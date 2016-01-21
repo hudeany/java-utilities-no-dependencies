@@ -10,8 +10,6 @@ import java.util.Stack;
 import java.util.regex.Pattern;
 
 public class JsonReader implements Closeable {
-	// TODO: 65535?
-	
 	/** Default input encoding. */
 	public static final String DEFAULT_ENCODING = "UTF-8";
 	
@@ -62,19 +60,19 @@ public class JsonReader implements Closeable {
 			currentChar = reuseChar;
 			reuseChar = null;
 		} else {
-			currentChar = readNextNonWhitespace(inputReader);
+			currentChar = readNextNonWhitespace();
 			
 			if (currentChar == ',') {
 				if (openJsonItems.peek() != JsonToken.JsonObject_Open && openJsonItems.peek() != JsonToken.JsonArray_Open) {
 					throw new Exception("Invalid json data at index " + readCharacters);
 				} else {
-					currentChar = readNextNonWhitespace(inputReader);
+					currentChar = readNextNonWhitespace();
 				}
 			} else if (currentChar == ':') {
 				if (openJsonItems.peek() != JsonToken.JsonObject_PropertyKey) {
 					throw new Exception("Invalid json data at index " + readCharacters);
 				} else {
-					currentChar = readNextNonWhitespace(inputReader);
+					currentChar = readNextNonWhitespace();
 				}
 			}
 		}
@@ -106,7 +104,7 @@ public class JsonReader implements Closeable {
 					return JsonToken.JsonArray_Close;
 				}
 			case '"':
-				currentObject = readQuotedText(inputReader);
+				currentObject = readQuotedText();
 				if (openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {
 					openJsonItems.pop();
 					return JsonToken.JsonSimpleValue;
@@ -118,16 +116,16 @@ public class JsonReader implements Closeable {
 				}
 			default:
 				if (openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {
-					String rawValueString = readUpToNext(inputReader, ',', '}').trim();
-					currentObject = readSimpleJsonValue(currentChar + rawValueString.substring(0, rawValueString.length() - 1));
+					String rawValueString = readUpToNext(',', '}');
+					currentObject = readSimpleJsonValue(currentChar + rawValueString.substring(0, rawValueString.length() - 1).trim());
 					if (rawValueString.charAt(rawValueString.length() - 1) == '}') {
 						reuseChar = '}';
 					}
 					openJsonItems.pop();
 					return JsonToken.JsonSimpleValue;
 				} else {
-					String rawValueString = readUpToNext(inputReader, ',', ']').trim();
-					currentObject = readSimpleJsonValue(currentChar + rawValueString.substring(0, rawValueString.length() - 1));
+					String rawValueString = readUpToNext(',', ']');
+					currentObject = readSimpleJsonValue(currentChar + rawValueString.substring(0, rawValueString.length() - 1).trim());
 					if (rawValueString.charAt(rawValueString.length() - 1) == ']') {
 						reuseChar = ']';
 					}
@@ -141,58 +139,27 @@ public class JsonReader implements Closeable {
 			throw new Exception("JsonReader position was not initialized for readNextJsonItem()");
 		}
 		
-		if (reuseChar != null) {
-			currentChar = reuseChar;
-			reuseChar = null;
+		JsonToken nextToken = readNextToken();
+		if (nextToken == JsonToken.JsonObject_Open) {
+			currentObject = readJsonObject();
+			return true;
+		} else if (nextToken == JsonToken.JsonArray_Open) {
+			currentObject = readJsonArray();
+			return true;
+		} else if (nextToken == JsonToken.JsonSimpleValue) {
+			// value was already read
+			return true;
+		} else if (nextToken == JsonToken.JsonObject_Close) {
+			reuseChar = currentChar;
+			openJsonItems.push(JsonToken.JsonObject_Open);
+			return false;
+		} else if (nextToken == JsonToken.JsonArray_Close) {
+			reuseChar = currentChar;
+			openJsonItems.push(JsonToken.JsonArray_Open);
+			return false;
 		} else {
-			currentChar = readNextNonWhitespace(inputReader);
-			
-			if (currentChar == ',') {
-				if (openJsonItems.peek() != JsonToken.JsonObject_Open && openJsonItems.peek() != JsonToken.JsonArray_Open) {
-					throw new Exception("Invalid json data at index " + readCharacters);
-				} else {
-					currentChar = readNextNonWhitespace(inputReader);
-				}
-			} else if (currentChar == ':') {
-				if (openJsonItems.peek() != JsonToken.JsonObject_PropertyKey) {
-					throw new Exception("Invalid json data at index " + readCharacters);
-				} else {
-					currentChar = readNextNonWhitespace(inputReader);
-				}
-			}
-		}
-		
-		currentObject = null;
-		switch (currentChar) {
-			case '}':
-			case ']':
-				reuseChar = currentChar;
-				return false;
-			case '{':
-				currentObject = readJsonObject(inputReader);
-				return true;
-			case '[':
-				currentObject = readJsonArray(inputReader);
-				return true;
-			case '"':
-				currentObject = readQuotedText(inputReader);
-				return true;
-			default:
-				if (openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {
-					String rawValueString = readUpToNext(inputReader, ',', '}');
-					currentObject = readSimpleJsonValue(currentChar + rawValueString.substring(0, rawValueString.length() - 1).trim());
-					if (rawValueString.charAt(rawValueString.length() - 1) == '}') {
-						reuseChar = '}';
-					}
-				} else {
-					String rawValueString = readUpToNext(inputReader, ',', ']');
-					currentObject = readSimpleJsonValue(currentChar + rawValueString.substring(0, rawValueString.length() - 1).trim());
-					if (rawValueString.charAt(rawValueString.length() - 1) == ']') {
-						reuseChar = ']';
-					}
-				}
-				return true;
-		}
+			throw new Exception("Invalid data at index " + readCharacters);
+		} 
 	}
 	
 	/**
@@ -209,113 +176,72 @@ public class JsonReader implements Closeable {
 			throw new Exception("JsonReader position was already initialized for other read operation");
 		}
 		
-		currentChar = readNextNonWhitespace(inputReader);
-		if (currentChar == '{') {
-			return readJsonObject(inputReader);
-		} else if (currentChar == '[') {
-			return readJsonArray(inputReader);
+		JsonToken nextToken = readNextToken();
+		if (nextToken == JsonToken.JsonObject_Open) {
+			return readJsonObject();
+		} else if (nextToken == JsonToken.JsonArray_Open) {
+			return readJsonArray();
 		} else {
-			throw new Exception("Invalid json data: No Json object or Json array at root");
+			throw new Exception("Invalid json data: No JsonObject or JsonArray at root");
 		}
 	}
 	
-	private JsonObject readJsonObject(BufferedReader inputReader) throws Exception {
-		reuseChar = null;
-		JsonObject jsonObject = new JsonObject();
-		currentChar = readNextNonWhitespace(inputReader);
-		if (currentChar == '}') {
-			// Empty Json object
-			return jsonObject;
+	private JsonObject readJsonObject() throws Exception {
+		if (currentChar != '{') {
+			throw new Exception("Invalid read position for JsonArray at index " + readCharacters);
 		} else {
-			while (true) {
-				if (currentChar == '"') {
-					// Read Json object property key
-					String key = readQuotedText(inputReader);
-					currentChar = readNextNonWhitespace(inputReader);
-					if (currentChar != ':') {
-						throw new Exception("Invalid json data at index " + readCharacters);
-					}
-					
-					// Read Json object property value
-					currentChar = readNextNonWhitespace(inputReader);
-					Object value;
-					if (currentChar == '{') {
-						value = readJsonObject(inputReader);
-						currentChar = readNextNonWhitespace(inputReader);
-					} else if (currentChar == '[') {
-						value = readJsonArray(inputReader);
-						currentChar = readNextNonWhitespace(inputReader);
-					} else if (currentChar == '"') {
-						value = readQuotedText(inputReader);
-						currentChar = readNextNonWhitespace(inputReader);
+			JsonObject returnObject = new JsonObject();
+			JsonToken nextToken = readNextToken();
+			while (nextToken != JsonToken.JsonObject_Close) {
+				if (nextToken == JsonToken.JsonObject_PropertyKey && currentObject instanceof String) {
+					String propertyKey = (String) currentObject;
+					nextToken = readNextToken();
+					if (nextToken == JsonToken.JsonArray_Open) {
+						returnObject.add(propertyKey, readJsonArray());
+					} else if (nextToken == JsonToken.JsonObject_Open) {
+						returnObject.add(propertyKey, readJsonObject());
+					} else if (nextToken == JsonToken.JsonSimpleValue) {
+						returnObject.add(propertyKey, currentObject);
 					} else {
-						String rawValueString = readUpToNext(inputReader, ',', '}');
-						value = readSimpleJsonValue(currentChar + rawValueString.substring(0, rawValueString.length() - 1).trim());
-						currentChar = rawValueString.charAt(rawValueString.length() - 1);
-						if (currentChar == '}') {
-							reuseChar = currentChar;
-						}
+						throw new Exception("Unexpected JsonToken " + nextToken + " at index " + readCharacters);
 					}
-					
-					jsonObject.add(key, value);
-					
-					if (currentChar == '}') {
-						return jsonObject;
-					} else if (currentChar == ',') {
-						currentChar = readNextNonWhitespace(inputReader);
-					} else {
-						throw new Exception("Invalid json data at index " + readCharacters);
-					}
+					nextToken = readNextToken();
 				} else {
-					throw new Exception("Invalid json data at index " + readCharacters);
+					throw new Exception("Unexpected JsonToken " + nextToken + " at index " + readCharacters);
 				}
 			}
+			return returnObject;
 		}
 	}
 	
-	private JsonArray readJsonArray(BufferedReader inputReader) throws Exception {
-		reuseChar = null;
-		JsonArray jsonArray = new JsonArray();
-		currentChar = readNextNonWhitespace(inputReader);
-		if (currentChar == ']') {
-			// Empty Json array
-			return jsonArray;
+	private JsonArray readJsonArray() throws Exception {
+		if (currentChar != '[') {
+			throw new Exception("Invalid read position for JsonArray at index " + readCharacters);
 		} else {
-			while (true) {
-				// Read Json array value
-				Object value;
-				if (currentChar == '{') {
-					value = readJsonObject(inputReader);
-					currentChar = readNextNonWhitespace(inputReader);
-				} else if (currentChar == '[') {
-					value = readJsonArray(inputReader);
-					currentChar = readNextNonWhitespace(inputReader);
-				} else if (currentChar == '"') {
-					value = readQuotedText(inputReader);
-					currentChar = readNextNonWhitespace(inputReader);
-				} else {
-					String rawValueString = readUpToNext(inputReader, ',', ']');
-					value = readSimpleJsonValue(currentChar + rawValueString.substring(0, rawValueString.length() - 1).trim());
-					currentChar = rawValueString.charAt(rawValueString.length() - 1);
-					if (currentChar == ']') {
-						reuseChar = currentChar;
+			JsonToken nextToken = readNextToken();
+			if (nextToken == JsonToken.JsonArray_Close
+					|| nextToken == JsonToken.JsonObject_Open
+					|| nextToken == JsonToken.JsonArray_Open
+					|| nextToken == JsonToken.JsonSimpleValue) {
+				JsonArray returnArray = new JsonArray();
+				while (nextToken != JsonToken.JsonArray_Close) {
+					if (nextToken == JsonToken.JsonArray_Open) {
+						returnArray.add(readJsonArray());
+					} else if (nextToken == JsonToken.JsonObject_Open) {
+						returnArray.add(readJsonObject());
+					} else if (nextToken == JsonToken.JsonSimpleValue) {
+						returnArray.add(currentObject);
 					}
+					nextToken = readNextToken();
 				}
-				
-				jsonArray.add(value);
-				
-				if (currentChar == ']') {
-					return jsonArray;
-				} else if (currentChar == ',') {
-					currentChar = readNextNonWhitespace(inputReader);
-				} else {
-					throw new Exception("Invalid json data at index " + readCharacters);
-				}
+				return returnArray;
+			} else {
+				throw new Exception("Unexpected JsonToken " + nextToken + " at index " + readCharacters);
 			}
 		}
 	}
 
-	private char readNextNonWhitespace(BufferedReader inputReader) throws Exception {
+	private char readNextNonWhitespace() throws Exception {
 		int currentCharInt;
 		while ((currentCharInt = inputReader.read()) != -1) {
 			currentChar = (char) currentCharInt;
@@ -327,7 +253,7 @@ public class JsonReader implements Closeable {
 		throw new Exception("Invalid json data: premature end of data");
 	}
 
-	private String readQuotedText(BufferedReader inputReader) throws Exception {
+	private String readQuotedText() throws Exception {
 		StringBuilder returnValue = new StringBuilder();
 		boolean escapeNextChar = false;
 		int currentCharInt;
@@ -346,7 +272,7 @@ public class JsonReader implements Closeable {
 		throw new Exception("Invalid json data: premature end of data");
 	}
 
-	private String readUpToNext(BufferedReader inputReader, char... endChars) throws Exception {
+	private String readUpToNext(char... endChars) throws Exception {
 		StringBuilder returnValue = new StringBuilder();
 		int currentCharInt;
 		while ((currentCharInt = (char) inputReader.read()) != -1) {

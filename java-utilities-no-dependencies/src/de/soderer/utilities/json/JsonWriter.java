@@ -75,6 +75,9 @@ public class JsonWriter implements Closeable {
 					write("," + linebreak, false);
 				} else if (latestOpenJsonItem == JsonStackItem.Array_Empty) {
 					write(linebreak, false);
+				} else if (latestOpenJsonItem == JsonStackItem.Object_Value) {
+					openJsonStackItems.push(JsonStackItem.Object_Value);
+					write(linebreak, false);
 				}
 				
 				if (latestOpenJsonItem != JsonStackItem.Object_Value) {
@@ -99,7 +102,7 @@ public class JsonWriter implements Closeable {
 				write(linebreak, false);
 			}
 			openJsonStackItems.push(JsonStackItem.Object);
-			write("\"" + propertyName.replace("\"", "\\\"") + "\":" + separator, true);
+			write("\"" + propertyName.replace("\"", "\\\"") + "\":", true);
 			openJsonStackItems.push(JsonStackItem.Object_Value);
 		}
 	}
@@ -111,15 +114,15 @@ public class JsonWriter implements Closeable {
 			throw new Exception("Not matching open Json item for adding object property value: " + latestOpenJsonItem);
 		} else {
 			if (propertyValue == null) {
-				write("null", false);
+				write(separator + "null", false);
 			} else if (propertyValue instanceof Boolean) {
-				write(Boolean.toString((Boolean) propertyValue), false);
+				write(separator + Boolean.toString((Boolean) propertyValue), false);
 			} else if (propertyValue instanceof Date) {
-				write("\"" + DateUtilities.ISO_8601_DATETIME_FORMAT.format((Date) propertyValue) + "\"", false);
+				write(separator + "\"" + DateUtilities.ISO_8601_DATETIME_FORMAT.format((Date) propertyValue) + "\"", false);
 			} else if (propertyValue instanceof Number) {
-				write(((Number) propertyValue).toString(), false);
+				write(separator + ((Number) propertyValue).toString(), false);
 			} else {
-				write("\"" + propertyValue.toString().replace("\"", "\\\"") + "\"", false);
+				write(separator + "\"" + propertyValue.toString().replace("\"", "\\\"") + "\"", false);
 			}
 		}
 	}
@@ -134,6 +137,10 @@ public class JsonWriter implements Closeable {
 		} else {
 			write(linebreak, false);
 			write("}", true);
+		}
+		
+		if (openJsonStackItems.size() > 0 && openJsonStackItems.peek() == JsonStackItem.Object_Value) {
+			openJsonStackItems.pop();
 		}
 	}
 	
@@ -150,6 +157,9 @@ public class JsonWriter implements Closeable {
 				if (latestOpenJsonItem == JsonStackItem.Array) {
 					write("," + linebreak, false);
 				} else if (latestOpenJsonItem == JsonStackItem.Array_Empty) {
+					write(linebreak, false);
+				} else if (latestOpenJsonItem == JsonStackItem.Object_Value) {
+					openJsonStackItems.push(JsonStackItem.Object_Value);
 					write(linebreak, false);
 				}
 				
@@ -178,15 +188,15 @@ public class JsonWriter implements Closeable {
 			openJsonStackItems.push(JsonStackItem.Array);
 			
 			if (arrayValue == null) {
-				write("null", false);
+				write("null", true);
 			} else if (arrayValue instanceof Boolean) {
-				write(Boolean.toString((Boolean) arrayValue), false);
+				write(Boolean.toString((Boolean) arrayValue), true);
 			} else if (arrayValue instanceof Date) {
-				write("\"" + DateUtilities.ISO_8601_DATETIME_FORMAT.format((Date) arrayValue) + "\"", false);
+				write("\"" + DateUtilities.ISO_8601_DATETIME_FORMAT.format((Date) arrayValue) + "\"", true);
 			} else if (arrayValue instanceof Number) {
-				write(((Number) arrayValue).toString(), false);
+				write(((Number) arrayValue).toString(), true);
 			} else {
-				write("\"" + arrayValue.toString().replace("\"", "\\\"") + "\"", false);
+				write("\"" + arrayValue.toString().replace("\"", "\\\"") + "\"", true);
 			}
 		}
 	}
@@ -201,6 +211,10 @@ public class JsonWriter implements Closeable {
 		} else {
 			write(linebreak, false);
 			write("]", true);
+		}
+		
+		if (openJsonStackItems.size() > 0 && openJsonStackItems.peek() == JsonStackItem.Object_Value) {
+			openJsonStackItems.pop();
 		}
 	}
 	
