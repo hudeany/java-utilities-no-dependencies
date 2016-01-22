@@ -65,11 +65,11 @@ public class DbUtilities {
 
 	public static String generateUrlConnectionString(DbVendor dbVendor, String dbServerHostname, int dbServerPort, String dbName) throws Exception {
 		if (DbVendor.Oracle == dbVendor) {
-			return "jdbc:oracle:thin:@" + dbServerHostname + ":" + (dbServerPort <= 0 ? 1521 : dbServerPort) + ":" + dbName;
+			return "jdbc:oracle:thin:@" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + ":" + dbName;
 		} else if (DbVendor.MySQL == dbVendor) {
-			return "jdbc:mysql://" + dbServerHostname + ":" + (dbServerPort <= 0 ? 3306 : dbServerPort) + "/" + dbName + "?useEncoding=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull";
+			return "jdbc:mysql://" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + "/" + dbName + "?useEncoding=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull";
 		} else if (DbVendor.PostgreSQL == dbVendor) {
-			return "jdbc:postgresql://" + dbServerHostname + ":" + (dbServerPort <= 0 ? 5432 : dbServerPort) + "/" + dbName;
+			return "jdbc:postgresql://" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + "/" + dbName;
 		} else {
 			throw new Exception("Unknown db vendor");
 		}
