@@ -49,6 +49,14 @@ public class JsonWriter implements Closeable {
 		this.encoding = isBlank(encoding) ? Charset.forName(DEFAULT_ENCODING) : Charset.forName(encoding);
 	}
 	
+	public void setIndentation(String indentation) {
+		this.indention = indentation;
+	}
+	
+	public void setIndentation(char indentationCharacter) {
+		this.indention = Character.toString(indentationCharacter);
+	}
+	
 	public void setUglify(boolean value) {
 		if (value) {
 			linebreak = "";
