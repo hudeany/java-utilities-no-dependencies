@@ -29,10 +29,18 @@ import javax.sql.DataSource;
 import de.soderer.utilities.collection.CaseInsensitiveMap;
 
 public class DbUtilities {
+	
+	/**
+	 * In an Oracle DB the statement "SELECT CURRENT_TIMESTAMP FROM DUAL" return this special Oracle type "oracle.sql.TIMESTAMPTZ",
+	 * which is not listed in java.sql.Types, but can be read via ResultSet.getTimestamp(i) into a normal java.sql.Timestamp object
+	 */
+	public static final int ORACLE_TIMESTAMPTZ_TYPECODE = -101;
+	
 	public enum DbVendor {
 		Oracle("oracle.jdbc.OracleDriver", 1521),
 		MySQL("com.mysql.jdbc.Driver", 3306),
-		PostgreSQL("org.postgresql.Driver", 5432);
+		PostgreSQL("org.postgresql.Driver", 5432),
+		SQLite("org.sqlite.JDBC", 0);
 		
 		public static DbVendor getDbVendorByName(String dbVendorName) throws Exception {
 			if ("oracle".equalsIgnoreCase(dbVendorName)) {
@@ -41,6 +49,8 @@ public class DbUtilities {
 				return DbUtilities.DbVendor.MySQL;
 			} else if ("postgres".equalsIgnoreCase(dbVendorName) || "postgresql".equalsIgnoreCase(dbVendorName)) {
 				return DbUtilities.DbVendor.PostgreSQL;
+			} else if ("sqlite".equalsIgnoreCase(dbVendorName)) {
+				return DbUtilities.DbVendor.SQLite;
 			} else {
 				throw new Exception("Unknown db vendor: " + dbVendorName);
 			}
@@ -70,6 +80,8 @@ public class DbUtilities {
 			return "jdbc:mysql://" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + "/" + dbName + "?useEncoding=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull";
 		} else if (DbVendor.PostgreSQL == dbVendor) {
 			return "jdbc:postgresql://" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + "/" + dbName;
+		} else if (DbVendor.SQLite == dbVendor) {
+			return "jdbc:sqlite:" + dbName.replace("~", System.getProperty("user.home"));
 		} else {
 			throw new Exception("Unknown db vendor");
 		}
@@ -82,19 +94,27 @@ public class DbUtilities {
 		
 		Class.forName(dbVendor.getDriverClassName());
 	
-		int port;
-		String[] hostParts = hostname.split(":");
-		if (hostParts.length == 2) {
-			try {
-				port = Integer.parseInt(hostParts[1]);
-			} catch (Exception e) {
-				throw new Exception("Invalid port: " + hostParts[1]);
+		if (dbVendor == DbVendor.SQLite) {
+			dbName = dbName.replace("~", System.getProperty("user.home"));
+			if (!new File(dbName).exists()) {
+				throw new Exception("SQLite db file '" + dbName + "' is not available");
 			}
+			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbName));
 		} else {
-			port = dbVendor.getDefaultPort();
+			int port;
+			String[] hostParts = hostname.split(":");
+			if (hostParts.length == 2) {
+				try {
+					port = Integer.parseInt(hostParts[1]);
+				} catch (Exception e) {
+					throw new Exception("Invalid port: " + hostParts[1]);
+				}
+			} else {
+				port = dbVendor.getDefaultPort();
+			}
+		
+			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, hostParts[0], port, dbName), userName, new String(password));
 		}
-	
-		return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, hostParts[0], port, dbName), userName, new String(password));
 	}
 
 	public static int readoutTableData(DataSource dataSource, String tableName, OutputStream outputStream, String encoding, char separator, Character stringQuote) throws Exception {
@@ -627,6 +647,8 @@ public class DbUtilities {
 					return DbVendor.MySQL;
 				} else if (productName != null && productName.toLowerCase().contains("postgres")) {
 					return DbVendor.PostgreSQL;
+				} else if (productName != null && productName.toLowerCase().contains("sqlite")) {
+					return DbVendor.SQLite;
 				} else {
 					throw new Exception("Unknown db vendor: " + productName);
 				}
@@ -1498,6 +1520,13 @@ public class DbUtilities {
 					}
 				}
 				tableQuery += " ORDER BY table_name";
+
+				resultSet = statement.executeQuery(tableQuery);
+				List<String> tableNamesToExport = new ArrayList<String>();
+				while (resultSet.next()) {
+					tableNamesToExport.add(resultSet.getString("table_name"));
+				}
+				return tableNamesToExport;
 			} else if (DbVendor.MySQL == dbVendor) {
 				tableQuery = "SELECT DISTINCT table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema')";
 				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
@@ -1511,6 +1540,13 @@ public class DbUtilities {
 					}
 				}
 				tableQuery += " ORDER BY table_name";
+
+				resultSet = statement.executeQuery(tableQuery);
+				List<String> tableNamesToExport = new ArrayList<String>();
+				while (resultSet.next()) {
+					tableNamesToExport.add(resultSet.getString("table_name"));
+				}
+				return tableNamesToExport;
 			} else if (DbVendor.PostgreSQL == dbVendor) {
 				tableQuery = "SELECT DISTINCT table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog')";
 				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
@@ -1524,15 +1560,36 @@ public class DbUtilities {
 					}
 				}
 				tableQuery += " ORDER BY table_name";
+
+				resultSet = statement.executeQuery(tableQuery);
+				List<String> tableNamesToExport = new ArrayList<String>();
+				while (resultSet.next()) {
+					tableNamesToExport.add(resultSet.getString("table_name"));
+				}
+				return tableNamesToExport;
+			} else if (DbVendor.SQLite == dbVendor) {
+				tableQuery = "SELECT name FROM sqlite_master WHERE type = 'table'";
+				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
+					if (Utilities.isNotBlank(tablePattern)) {
+						tablePattern = tablePattern.trim().toUpperCase().replace("%", "\\%").replace("_", "\\_").replace("*", "%").replace("?", "_");
+						if (tablePattern.startsWith("!")) {
+							tableQuery += " AND name NOT LIKE '" + tablePattern.substring(1) + "' ESCAPE '\\'";
+						} else {
+							tableQuery += " AND name LIKE '" + tablePattern + "' ESCAPE '\\'";
+						}
+					}
+				}
+				tableQuery += " ORDER BY name";
+				
+				resultSet = statement.executeQuery(tableQuery);
+				List<String> tableNamesToExport = new ArrayList<String>();
+				while (resultSet.next()) {
+					tableNamesToExport.add(resultSet.getString("name"));
+				}
+				return tableNamesToExport;
 			} else {
 				throw new Exception("Unknown db vendor");
 			}
-			resultSet = statement.executeQuery(tableQuery);
-			List<String> tableNamesToExport = new ArrayList<String>();
-			while (resultSet.next()) {
-				tableNamesToExport.add(resultSet.getString("table_name"));
-			}
-			return tableNamesToExport;
 		} catch (Exception e) {
 			throw e;
 		} finally {
