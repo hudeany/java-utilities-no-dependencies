@@ -1,6 +1,7 @@
 package de.soderer.utilities.xml;
 
 import java.io.OutputStream;
+import java.util.Stack;
 
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.stream.XMLOutputFactory;
@@ -8,8 +9,15 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 public class IndentedXMLStreamWriter implements XMLStreamWriter {
-	private boolean currentElementHasContent = false;
-	private int currentLevel = 0;
+	private enum State {
+		NOTHING,
+		ELEMENT,
+		DATA
+	}
+	
+	private int currentDepth = 0;
+	private State currentState = State.NOTHING;
+	private Stack<State> stateStack = new Stack<State>();
 
 	private String indentationString;
 
@@ -107,19 +115,19 @@ public class IndentedXMLStreamWriter implements XMLStreamWriter {
 
 	@Override
 	public void writeCharacters(String text) throws XMLStreamException {
-		currentElementHasContent = true;
+		currentState = State.DATA;
 		writer.writeCharacters(text);
 	}
 
 	@Override
 	public void writeCharacters(char[] text, int start, int len) throws XMLStreamException {
-		currentElementHasContent = true;
+		currentState = State.DATA;
 		writer.writeCharacters(text, start, len);
 	}
 
 	@Override
 	public void writeCData(String data) throws XMLStreamException {
-		currentElementHasContent = true;
+		currentState = State.DATA;
 		writer.writeCData(data);
 	}
 
@@ -219,34 +227,37 @@ public class IndentedXMLStreamWriter implements XMLStreamWriter {
 	}
 
 	private void onStartElement() throws XMLStreamException {
-		currentLevel++;
-		currentElementHasContent = false;
-		if (currentLevel > 0) {
+		stateStack.push(State.ELEMENT);
+		currentState = State.NOTHING;
+		if (currentDepth > 0) {
 			writer.writeCharacters("\n");
 		}
 		doIndent();
+		currentDepth++;
 	}
 
 	private void onEndElement() throws XMLStreamException {
-		if (!currentElementHasContent) {
+		currentDepth--;
+		if (currentState == State.ELEMENT) {
 			writer.writeCharacters("\n");
 			doIndent();
 		}
-		currentElementHasContent = false;
-		currentLevel--;
+		currentState = stateStack.pop();
 	}
 
 	private void onEmptyElement() throws XMLStreamException {
-		currentElementHasContent = false;
-		if (currentLevel > 0) {
+		currentState = State.ELEMENT;
+		if (currentDepth > 0) {
 			writer.writeCharacters("\n");
 		}
 		doIndent();
 	}
 
 	private void doIndent() throws XMLStreamException {
-		for (int i = 0; i < currentLevel; i++) {
-			writer.writeCharacters(indentationString);
+		if (currentDepth > 0) {
+			for (int i = 0; i < currentDepth; i++) {
+				writer.writeCharacters(indentationString);
+			}
 		}
 	}
 }
