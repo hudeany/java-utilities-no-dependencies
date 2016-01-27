@@ -35,31 +35,41 @@ public class JsonReader extends BasicReader {
 	public JsonToken readNextToken() throws Exception {
 		currentObject = null;
 		switch (readNextNonWhitespace()) {
-			case '{':
+			case '{': // Open JsonObject
 				if (openJsonItems.size() > 0 && openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {
 					openJsonItems.pop();
 				}
 				openJsonItems.push(JsonToken.JsonObject_Open);
 				return JsonToken.JsonObject_Open;
-			case '}':
+			case '}': // Close JsonObject
 				if (openJsonItems.pop() != JsonToken.JsonObject_Open) {
 					throw new Exception("Invalid json data at index " + getReadCharacters());
 				} else {
 					return JsonToken.JsonObject_Close;
 				}
-			case '[':
+			case '[': // Open JsonArray
 				if (openJsonItems.size() > 0 && openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {
 					openJsonItems.pop();
 				}
 				openJsonItems.push(JsonToken.JsonArray_Open);
 				return JsonToken.JsonArray_Open;
-			case ']':
+			case ']': // Close JsonArray
 				if (openJsonItems.pop() != JsonToken.JsonArray_Open) {
 					throw new Exception("Invalid json data at index " + getReadCharacters());
 				} else {
 					return JsonToken.JsonArray_Close;
 				}
-			case '"':
+			case ',': // Separator of JsonObject properties or JsonArray items
+				char nextCharAfterComma = readNextNonWhitespace();
+				if (nextCharAfterComma == '}' || nextCharAfterComma == ']') {
+					throw new Exception("Invalid json data at index " + getReadCharacters());
+				} else {
+					reuseCurrentChar();
+					return readNextToken();
+				}
+			case '\'': // Not allowed single-quoted value
+				throw new Exception("Invalid json data at index " + getReadCharacters());
+			case '"': // Start JsonObject propertykey or propertyvalue or JsonArray item
 				if (openJsonItems.peek() == JsonToken.JsonArray_Open) {
 					currentObject = readQuotedText('"', '\\');
 					return JsonToken.JsonSimpleValue;
@@ -83,17 +93,7 @@ public class JsonReader extends BasicReader {
 				} else {
 					throw new Exception("Invalid json data at index " + getReadCharacters());
 				}
-			case '\'':
-				throw new Exception("Invalid json data at index " + getReadCharacters());
-			case ',':
-				char nextCharAfterComma = readNextNonWhitespace();
-				if (nextCharAfterComma == '}' || nextCharAfterComma == ']') {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
-				} else {
-					reuseCurrentChar();
-					return readNextToken();
-				}
-			default:
+			default: // Start JsonObject propertyvalue or JsonArray item
 				if (openJsonItems.peek() == JsonToken.JsonArray_Open) {
 					currentObject = readSimpleJsonValue(readUpToNext(false, null, ',', ']').trim());
 					return JsonToken.JsonSimpleValue;
