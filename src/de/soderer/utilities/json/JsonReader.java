@@ -34,7 +34,8 @@ public class JsonReader extends BasicReader {
 	
 	public JsonToken readNextToken() throws Exception {
 		currentObject = null;
-		switch (readNextNonWhitespace()) {
+		char currentChar = readNextNonWhitespace();
+		switch (currentChar) {
 			case '{': // Open JsonObject
 				if (openJsonItems.size() > 0 && openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {
 					openJsonItems.pop();
@@ -43,7 +44,7 @@ public class JsonReader extends BasicReader {
 				return JsonToken.JsonObject_Open;
 			case '}': // Close JsonObject
 				if (openJsonItems.pop() != JsonToken.JsonObject_Open) {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				} else {
 					return JsonToken.JsonObject_Close;
 				}
@@ -55,20 +56,20 @@ public class JsonReader extends BasicReader {
 				return JsonToken.JsonArray_Open;
 			case ']': // Close JsonArray
 				if (openJsonItems.pop() != JsonToken.JsonArray_Open) {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				} else {
 					return JsonToken.JsonArray_Close;
 				}
 			case ',': // Separator of JsonObject properties or JsonArray items
-				char nextCharAfterComma = readNextNonWhitespace();
-				if (nextCharAfterComma == '}' || nextCharAfterComma == ']') {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+				currentChar = readNextNonWhitespace();
+				if (currentChar == '}' || currentChar == ']') {
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				} else {
 					reuseCurrentChar();
 					return readNextToken();
 				}
 			case '\'': // Not allowed single-quoted value
-				throw new Exception("Invalid json data at index " + getReadCharacters());
+				throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 			case '"': // Start JsonObject propertykey or propertyvalue or JsonArray item
 				if (openJsonItems.peek() == JsonToken.JsonArray_Open) {
 					currentObject = readQuotedText('"', '\\');
@@ -76,22 +77,22 @@ public class JsonReader extends BasicReader {
 				} else if (openJsonItems.peek() == JsonToken.JsonObject_Open) {
 					currentObject = readQuotedText('"', '\\');
 					if (readNextNonWhitespace() != ':') {
-						throw new Exception("Invalid json data at index " + getReadCharacters());
+						throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 					}
 					openJsonItems.push(JsonToken.JsonObject_PropertyKey);
 					return JsonToken.JsonObject_PropertyKey;
 				} else if (openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {
 					currentObject = readQuotedText('"', '\\');
 					openJsonItems.pop();
-					char currentChar = readNextNonWhitespace();
+					currentChar = readNextNonWhitespace();
 					if (currentChar == '}') {
 						reuseCurrentChar();
 					} else if (currentChar != ',') {
-						throw new Exception("Invalid json data at index " + getReadCharacters());
+						throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 					}
 					return JsonToken.JsonSimpleValue;
 				} else {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				}
 			default: // Start JsonObject propertyvalue or JsonArray item
 				if (openJsonItems.peek() == JsonToken.JsonArray_Open) {
@@ -100,20 +101,20 @@ public class JsonReader extends BasicReader {
 				} else if (openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {
 					openJsonItems.pop();
 					currentObject = readSimpleJsonValue(readUpToNext(false, null, ',', '}').trim());
-					char nextCharAfterSimpleValue = readNextNonWhitespace();
-					if (nextCharAfterSimpleValue == '}') {
+					currentChar = readNextNonWhitespace();
+					if (currentChar == '}') {
 						reuseCurrentChar();
 					} else {
-						nextCharAfterSimpleValue = readNextNonWhitespace();
-						if (nextCharAfterSimpleValue == '}') {
-							throw new Exception("Invalid json data at index " + getReadCharacters());
+						currentChar = readNextNonWhitespace();
+						if (currentChar == '}') {
+							throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 						} else {
 							reuseCurrentChar();
 						}
 					}
 					return JsonToken.JsonSimpleValue;
 				} else {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				}
 		}
 	}

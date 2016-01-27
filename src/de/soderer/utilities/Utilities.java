@@ -1143,4 +1143,29 @@ public class Utilities {
 			throw new IOException("Error, could not add file to system classloader: " + t.getMessage(), t);
 		}
 	}
+
+	public static String shortenStringToMaxLengthCutRight(String value, int maxLength) {
+		if (value != null && value.length() > maxLength) {
+			return value.substring(0, maxLength - 4) + " ...";
+		} else {
+			return value;
+		}
+	}
+
+	public static String shortenStringToMaxLengthCutMiddle(String value, int maxLength) {
+		if (value != null && value.length() > maxLength) {
+			int leftLength = (maxLength - 5) / 2;
+			return value.substring(0, leftLength) + " ... " + value.substring(value.length() - ((maxLength - leftLength) - 5));
+		} else {
+			return value;
+		}
+	}
+
+	public static String shortenStringToMaxLengthCutLeft(String value, int maxLength) {
+		if (value != null && value.length() > maxLength) {
+			return "... " + value.substring((value.length() - maxLength) + 4);
+		} else {
+			return value;
+		}
+	}
 }

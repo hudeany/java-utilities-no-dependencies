@@ -3,6 +3,8 @@ package de.soderer.utilities.json;
 import java.io.InputStream;
 import java.util.regex.Pattern;
 
+import de.soderer.utilities.Utilities;
+
 /**
  * Differences to standard JSON:<br />
  * Objects:<br />
@@ -45,7 +47,7 @@ public class Json5Reader extends JsonReader {
 				return JsonToken.JsonObject_Open;
 			case '}': // Close JsonObject
 				if (openJsonItems.pop() != JsonToken.JsonObject_Open) {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				} else {
 					return JsonToken.JsonObject_Close;
 				}
@@ -57,7 +59,7 @@ public class Json5Reader extends JsonReader {
 				return JsonToken.JsonArray_Open;
 			case ']': // Close JsonArray
 				if (openJsonItems.pop() != JsonToken.JsonArray_Open) {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				} else {
 					return JsonToken.JsonArray_Close;
 				}
@@ -74,7 +76,7 @@ public class Json5Reader extends JsonReader {
 						readUpToNext(true, null, '*');
 					}
 				} else {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				}
 				return readNextToken();
 			case '"':
@@ -86,7 +88,7 @@ public class Json5Reader extends JsonReader {
 					currentObject = readQuotedText(currentChar, '\\');
 					currentChar = readNextNonWhitespace();
 					if (currentChar != ':') {
-						throw new Exception("Invalid json data at index " + getReadCharacters());
+						throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 					}
 					openJsonItems.push(JsonToken.JsonObject_PropertyKey);
 					return JsonToken.JsonObject_PropertyKey;
@@ -97,11 +99,11 @@ public class Json5Reader extends JsonReader {
 					if (currentChar == '}') {
 						reuseCurrentChar();
 					} else if (currentChar != ',') {
-						throw new Exception("Invalid json data at index " + getReadCharacters());
+						throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 					}
 					return JsonToken.JsonSimpleValue;
 				} else {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				}
 			default: // Start JsonObject propertykey or propertyvalue or JsonArray item
 				if (openJsonItems.peek() == JsonToken.JsonObject_Open) {
@@ -125,7 +127,7 @@ public class Json5Reader extends JsonReader {
 					}
 					return JsonToken.JsonSimpleValue;
 				} else {
-					throw new Exception("Invalid json data at index " + getReadCharacters());
+					throw new Exception("Invalid json data '" + currentChar + "' at index " + getReadCharacters());
 				}
 		}
 	}
@@ -164,7 +166,7 @@ public class Json5Reader extends JsonReader {
 				}
 			}
 		} else {
-			throw new Exception("Invalid json data at index " + getReadCharacters());
+			throw new Exception("Invalid json data '" + Utilities.shortenStringToMaxLengthCutLeft(valueString, 20) + "' at index " + getReadCharacters());
 		}
 	}
 
@@ -181,7 +183,7 @@ public class Json5Reader extends JsonReader {
 		if (Pattern.matches("[A-Za-z_$]+[A-Za-z_$0-9]*", identifierString)) {
 			return identifierString;
 		} else {
-			throw new Exception("Invalid json identifier at index " + getReadCharacters());
+			throw new Exception("Invalid json identifier '" + Utilities.shortenStringToMaxLengthCutLeft(identifierString, 20) + "' at index " + getReadCharacters());
 		}
 	}
 }
