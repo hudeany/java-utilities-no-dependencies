@@ -40,7 +40,8 @@ public class DbUtilities {
 		Oracle("oracle.jdbc.OracleDriver", 1521),
 		MySQL("com.mysql.jdbc.Driver", 3306),
 		PostgreSQL("org.postgresql.Driver", 5432),
-		SQLite("org.sqlite.JDBC", 0);
+		SQLite("org.sqlite.JDBC", 0),
+		Derby("org.apache.derby.jdbc.EmbeddedDriver", 0);
 		
 		public static DbVendor getDbVendorByName(String dbVendorName) throws Exception {
 			if ("oracle".equalsIgnoreCase(dbVendorName)) {
@@ -51,6 +52,8 @@ public class DbUtilities {
 				return DbUtilities.DbVendor.PostgreSQL;
 			} else if ("sqlite".equalsIgnoreCase(dbVendorName)) {
 				return DbUtilities.DbVendor.SQLite;
+			} else if ("derby".equalsIgnoreCase(dbVendorName)) {
+				return DbUtilities.DbVendor.Derby;
 			} else {
 				throw new Exception("Unknown db vendor: " + dbVendorName);
 			}
@@ -82,6 +85,8 @@ public class DbUtilities {
 			return "jdbc:postgresql://" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + "/" + dbName;
 		} else if (DbVendor.SQLite == dbVendor) {
 			return "jdbc:sqlite:" + dbName.replace("~", System.getProperty("user.home"));
+		} else if (DbVendor.Derby == dbVendor) {
+			return "jdbc:derby:" + dbName.replace("~", System.getProperty("user.home") + ";create=false");
 		} else {
 			throw new Exception("Unknown db vendor");
 		}
@@ -98,6 +103,12 @@ public class DbUtilities {
 			dbName = dbName.replace("~", System.getProperty("user.home"));
 			if (!new File(dbName).exists()) {
 				throw new Exception("SQLite db file '" + dbName + "' is not available");
+			}
+			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbName));
+		} else if (dbVendor == DbVendor.Derby) {
+			dbName = dbName.replace("~", System.getProperty("user.home"));
+			if (!new File(dbName).exists()) {
+				throw new Exception("Derby db file '" + dbName + "' is not available");
 			}
 			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbName));
 		} else {
@@ -649,6 +660,8 @@ public class DbUtilities {
 					return DbVendor.PostgreSQL;
 				} else if (productName != null && productName.toLowerCase().contains("sqlite")) {
 					return DbVendor.SQLite;
+				} else if (productName != null && productName.toLowerCase().contains("derby")) {
+					return DbVendor.Derby;
 				} else {
 					throw new Exception("Unknown db vendor: " + productName);
 				}
@@ -1585,6 +1598,26 @@ public class DbUtilities {
 				List<String> tableNamesToExport = new ArrayList<String>();
 				while (resultSet.next()) {
 					tableNamesToExport.add(resultSet.getString("name"));
+				}
+				return tableNamesToExport;
+			}  else if (DbVendor.Derby == dbVendor) {
+				tableQuery = "SELECT tablename FROM sys.systables WHERE tabletype = 'T'";
+				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
+					if (Utilities.isNotBlank(tablePattern)) {
+						tablePattern = tablePattern.trim().toUpperCase().replace("%", "\\%").replace("_", "\\_").replace("*", "%").replace("?", "_");
+						if (tablePattern.startsWith("!")) {
+							tableQuery += " AND tablename NOT LIKE '" + tablePattern.substring(1) + "' {ESCAPE '\\'}";
+						} else {
+							tableQuery += " AND tablename LIKE '" + tablePattern + "' {ESCAPE '\\'}";
+						}
+					}
+				}
+				tableQuery += " ORDER BY tablename";
+				
+				resultSet = statement.executeQuery(tableQuery);
+				List<String> tableNamesToExport = new ArrayList<String>();
+				while (resultSet.next()) {
+					tableNamesToExport.add(resultSet.getString("tablename"));
 				}
 				return tableNamesToExport;
 			} else {

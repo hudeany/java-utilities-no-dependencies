@@ -24,17 +24,25 @@ public abstract class BasicReader implements Closeable {
 	private Character reuseChar = null;
 	private long readCharacters = 0;
 
-	public BasicReader(InputStream inputStream) {
-		this(inputStream, null);
+	public BasicReader(InputStream inputStream) throws Exception {
+		this(inputStream, (String) null);
 	}
 	
 	public long getReadCharacters() {
 		return readCharacters;
 	}
 	
-	public BasicReader(InputStream inputStream, String encoding) {
+	public BasicReader(InputStream inputStream, String encoding) throws Exception {
+		this(inputStream, isBlank(encoding) ? Charset.forName(DEFAULT_ENCODING) : Charset.forName(encoding));
+	}
+	
+	public BasicReader(InputStream inputStream, Charset encodingCharset) throws Exception {
+		if (inputStream == null) {
+			throw new Exception("Invalid empty inputStream");
+			
+		}
 		this.inputStream = inputStream;
-		this.encoding = isBlank(encoding) ? Charset.forName(DEFAULT_ENCODING) : Charset.forName(encoding);
+		this.encoding = encodingCharset == null ? Charset.forName(DEFAULT_ENCODING) : encodingCharset;
 	}
 	
 	public void reuseCurrentChar() {
@@ -42,8 +50,11 @@ public abstract class BasicReader implements Closeable {
 		readCharacters--;
 	}
 
-	protected char readNextCharacter() throws Exception {
+	protected char readNextCharacter() throws IOException {
 		if (inputReader == null) {
+			if (inputStream == null) {
+				throw new IllegalStateException("Reader is already closed");
+			}
 			inputReader = new BufferedReader(new InputStreamReader(inputStream, encoding));
 		}
 		
@@ -55,11 +66,16 @@ public abstract class BasicReader implements Closeable {
 		} else {
 			int currentCharInt = inputReader.read();
 			if (currentCharInt != -1) {
+				// Check for UTF-8 BOM at data start
+				if (readCharacters == 0 && encoding == Charset.forName("UTF-8") && currentCharInt == Utilities.BOM_UTF_8_CHAR) {
+					readNextCharacter();
+				}
+				
 				currentChar = (char) currentCharInt;
 				readCharacters++;
 				return currentChar;
 			} else {
-				throw new Exception("Premature end of data");
+				throw new IOException("Premature end of data");
 			}
 		}
 	}
@@ -105,6 +121,13 @@ public abstract class BasicReader implements Closeable {
 					returnValue.append(escapeCharacter);
 				} else if ('\n' == currentChar) {
 					returnValue.append('\n');
+				} else if ('\r' == currentChar) {
+					returnValue.append(currentChar);
+					if ('\n' == readNextCharacter()) {
+						returnValue.append(currentChar);
+					} else {
+						reuseCurrentChar();
+					}
 				} else {
 					for (char endChar : endChars) {
 						if (endChar == currentChar) {
@@ -130,7 +153,7 @@ public abstract class BasicReader implements Closeable {
 	 * Close this writer and its underlying stream.
 	 */
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		closeQuietly(inputReader);
 		inputReader = null;
 		inputStream = null;
@@ -145,6 +168,17 @@ public abstract class BasicReader implements Closeable {
 	 */
 	private static boolean isBlank(String value) {
 		return value == null || value.trim().length() == 0;
+	}
+
+	/**
+	 * Check if String value is not null and has a length greater than 0.
+	 *
+	 * @param value
+	 *            the value
+	 * @return true, if is not empty
+	 */
+	protected static boolean isNotEmpty(String value) {
+		return value != null && value.length() > 0;
 	}
 
 	/**

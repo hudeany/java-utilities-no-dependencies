@@ -1,6 +1,7 @@
 package de.soderer.utilities.json;
 
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.Stack;
 import java.util.regex.Pattern;
 
@@ -20,12 +21,16 @@ public class JsonReader extends BasicReader {
 		JsonSimpleValue,
 	}
 
-	public JsonReader(InputStream inputStream) {
-		super(inputStream, null);
+	public JsonReader(InputStream inputStream) throws Exception {
+		super(inputStream, (String) null);
 	}
 	
-	public JsonReader(InputStream inputStream, String encoding) {
+	public JsonReader(InputStream inputStream, String encoding) throws Exception {
 		super(inputStream, encoding);
+	}
+	
+	public JsonReader(InputStream inputStream, Charset encodingCharset) throws Exception {
+		super(inputStream, encodingCharset);
 	}
 	
 	public Object getCurrentObject() {

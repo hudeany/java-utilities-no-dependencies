@@ -620,11 +620,11 @@ public class TextUtilities {
 	 * @throws UnsupportedEncodingException
 	 */
 	public static Tuple<String, Boolean> detectEncoding(byte[] data) throws UnsupportedEncodingException {
-		if (data.length > 2 && data[0] == Utilities.UTF_16_BE_BOM[0] && data[1] == Utilities.UTF_16_BE_BOM[1]) {
+		if (data.length > 2 && data[0] == Utilities.BOM_UTF_16_BIG_ENDIAN[0] && data[1] == Utilities.BOM_UTF_16_BIG_ENDIAN[1]) {
 			return new Tuple<String, Boolean>("UTF-16BE", true);
-		} else if (data.length > 2 && data[0] == Utilities.UTF_16_LE_BOM[0] && data[1] == Utilities.UTF_16_LE_BOM[1]) {
+		} else if (data.length > 2 && data[0] == Utilities.BOM_UTF_16_LOW_ENDIAN[0] && data[1] == Utilities.BOM_UTF_16_LOW_ENDIAN[1]) {
 			return new Tuple<String, Boolean>("UTF-16LE", true);
-		} else if (data.length > 3 && data[0] == Utilities.UTF_8_BOM[0] && data[1] == Utilities.UTF_8_BOM[1] && data[2] == Utilities.UTF_8_BOM[2]) {
+		} else if (data.length > 3 && data[0] == Utilities.BOM_UTF_8[0] && data[1] == Utilities.BOM_UTF_8[1] && data[2] == Utilities.BOM_UTF_8[2]) {
 			return new Tuple<String, Boolean>("UTF-8", true);
 		} else {
 			// Detect Xml Encoding

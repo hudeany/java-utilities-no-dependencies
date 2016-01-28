@@ -1,6 +1,7 @@
 package de.soderer.utilities.json;
 
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
 import de.soderer.utilities.Utilities;
@@ -26,12 +27,16 @@ import de.soderer.utilities.Utilities;
  * 	Block comment (multi-line)<br />
  */
 public class Json5Reader extends JsonReader {
-	public Json5Reader(InputStream inputStream) {
-		this(inputStream, null);
+	public Json5Reader(InputStream inputStream) throws Exception {
+		this(inputStream, (String) null);
 	}
 	
-	public Json5Reader(InputStream inputStream, String encoding) {
+	public Json5Reader(InputStream inputStream, String encoding) throws Exception {
 		super(inputStream, encoding);
+	}
+	
+	public Json5Reader(InputStream inputStream, Charset encodingCharset) throws Exception {
+		super(inputStream, encodingCharset);
 	}
 	
 	@Override

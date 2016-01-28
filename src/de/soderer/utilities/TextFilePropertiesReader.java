@@ -235,13 +235,13 @@ public class TextFilePropertiesReader extends TextPropertiesReader {
 			String encoding = encodingData.getFirst();
 			if ("UnicodeBig".equalsIgnoreCase(encodingData.getFirst()) || ("UTF-16BE".equalsIgnoreCase(encodingData.getFirst()) && encodingData.getSecond())
 					|| ("UTF-16".equalsIgnoreCase(encodingData.getFirst()) && encodingData.getSecond())) {
-				output.write(Utilities.UTF_16_BE_BOM);
+				output.write(Utilities.BOM_UTF_16_BIG_ENDIAN);
 				encoding = "UTF-16BE";
 			} else if ("UnicodeLittle".equalsIgnoreCase(encodingData.getFirst()) || ("UTF-16LE".equalsIgnoreCase(encodingData.getFirst()) && encodingData.getSecond())) {
-				output.write(Utilities.UTF_16_LE_BOM);
+				output.write(Utilities.BOM_UTF_16_LOW_ENDIAN);
 				encoding = "UTF-16LE";
 			} else if ("UTF-8".equalsIgnoreCase(encodingData.getFirst()) && encodingData.getSecond()) {
-				output.write(Utilities.UTF_8_BOM);
+				output.write(Utilities.BOM_UTF_8);
 			}
 			output.write(text.getBytes(encoding));
 			return output.toByteArray();
@@ -249,11 +249,11 @@ public class TextFilePropertiesReader extends TextPropertiesReader {
 	}
 
 	public static String decodeByteArray(byte[] data, Tuple<String, Boolean> encodingData) throws IOException {
-		if (data.length > 2 && data[0] == Utilities.UTF_16_BE_BOM[0] && data[1] == Utilities.UTF_16_BE_BOM[1]) {
+		if (data.length > 2 && data[0] == Utilities.BOM_UTF_16_BIG_ENDIAN[0] && data[1] == Utilities.BOM_UTF_16_BIG_ENDIAN[1]) {
 			return new String(data, 2, data.length - 2, encodingData.getFirst());
-		} else if (data.length > 2 && data[0] == Utilities.UTF_16_LE_BOM[0] && data[1] == Utilities.UTF_16_LE_BOM[1]) {
+		} else if (data.length > 2 && data[0] == Utilities.BOM_UTF_16_LOW_ENDIAN[0] && data[1] == Utilities.BOM_UTF_16_LOW_ENDIAN[1]) {
 			return new String(data, 2, data.length - 2, encodingData.getFirst());
-		} else if (data.length > 3 && data[0] == Utilities.UTF_8_BOM[0] && data[1] == Utilities.UTF_8_BOM[1] && data[2] == Utilities.UTF_8_BOM[2]) {
+		} else if (data.length > 3 && data[0] == Utilities.BOM_UTF_8[0] && data[1] == Utilities.BOM_UTF_8[1] && data[2] == Utilities.BOM_UTF_8[2]) {
 			return new String(data, 3, data.length - 3, encodingData.getFirst());
 		} else {
 			return new String(data, encodingData.getFirst());

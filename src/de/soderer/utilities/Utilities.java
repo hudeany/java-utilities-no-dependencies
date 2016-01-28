@@ -50,9 +50,17 @@ public class Utilities {
 	public static final String STANDARD_HTML = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t<head>\n\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=<encoding>\" />\n\t\t<title>HtmlTitle</title>\n\t\t<meta name=\"Title\" content=\"HtmlTitle\" />\n\t</head>\n\t<body>\n\t</body>\n</html>\n";
 	public static final String STANDARD_BASHSCRIPTSTART = "#!/bin/bash\n";
 
-	public static final byte[] UTF_16_LE_BOM = new byte[] { (byte) 0xFF, (byte) 0xFE };
-	public static final byte[] UTF_16_BE_BOM = new byte[] { (byte) 0xFE, (byte) 0xFF };
-	public static final byte[] UTF_8_BOM = new byte[] { (byte) 0xEF, (byte) 0xBB, (byte) 0xBF };
+	/** UTF-8 BOM (Byte Order Mark) character for readers. */
+	public static final char BOM_UTF_8_CHAR = (char) 65279;
+
+	/** UTF-8 BOM (Byte Order Mark) at data start (EF BB BF, "ï»¿"). */
+	public static final byte[] BOM_UTF_8 = new byte[] { (byte) 0xEF, (byte) 0xBB, (byte) 0xBF };
+
+	/** UTF-16 BOM (Byte Order Mark) big endian at data start (FE FF, "þÿ"). */
+	public static final byte[] BOM_UTF_16_BIG_ENDIAN = new byte[] { (byte) 0xFE, (byte) 0xFF };
+
+	/** UTF-16 BOM (Byte Order Mark) low endian at data start (FF FE, "ÿþ"). */
+	public static final byte[] BOM_UTF_16_LOW_ENDIAN = new byte[] { (byte) 0xFF, (byte) 0xFE };
 
 	/**
 	 * Generate a unique ID
