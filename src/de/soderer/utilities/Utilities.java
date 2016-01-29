@@ -23,6 +23,11 @@ import java.net.URLClassLoader;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -889,6 +894,46 @@ public class Utilities {
 			try {
 				closeable.close();
 			} catch (IOException e) {
+				// Do nothing
+			}
+		}
+	}
+
+	public static void closeQuietly(Statement statement) {
+		if (statement != null) {
+			try {
+				statement.close();
+			} catch (SQLException e) {
+				// Do nothing
+			}
+		}
+	}
+
+	public static void closeQuietly(ResultSet resultSet) {
+		if (resultSet != null) {
+			try {
+				resultSet.close();
+			} catch (SQLException e) {
+				// Do nothing
+			}
+		}
+	}
+
+	public static void closeQuietly(Connection connection) {
+		if (connection != null) {
+			try {
+				connection.close();
+			} catch (SQLException e) {
+				// Do nothing
+			}
+		}
+	}
+
+	public static void closeQuietly(PreparedStatement preparedStatement) {
+		if (preparedStatement != null) {
+			try {
+				preparedStatement.close();
+			} catch (SQLException e) {
 				// Do nothing
 			}
 		}
