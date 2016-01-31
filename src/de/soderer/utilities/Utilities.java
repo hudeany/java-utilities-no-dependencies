@@ -940,6 +940,10 @@ public class Utilities {
 	}
 
 	public static String repeat(String value, int count) {
+		return repeat(value, count, null);
+	}
+
+	public static String repeat(String value, int count, String separatorString) {
 		if (value == null) {
 			return null;
 		} else if (value.length() == 0 || count == 0) {
@@ -947,6 +951,9 @@ public class Utilities {
 		} else {
 			StringBuilder returnValue = new StringBuilder();
 			for (int i = 0; i < count; i++) {
+				if (separatorString != null && returnValue.length() > 0) {
+					returnValue.append(separatorString);
+				}
 				returnValue.append(value);
 			}
 			return returnValue.toString();
@@ -1162,6 +1169,15 @@ public class Utilities {
 
 	public static String toString(InputStream inputStream, String encoding) throws UnsupportedEncodingException, IOException {
 		return new String(toByteArray(inputStream), encoding);
+	}
+
+	public static Object toString(Reader characterStream) throws IOException {
+		StringBuilder returnValue = new StringBuilder();
+		int characterInt;
+		while ((characterInt = characterStream.read()) > -1) {
+			returnValue.append((char) characterInt);
+		}
+		return returnValue.toString();
 	}
 
 	public static List<String> readLines(InputStream inStream, String encoding) throws IOException {

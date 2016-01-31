@@ -421,6 +421,18 @@ public class CsvWriter implements Closeable {
 	}
 
 	/**
+	 * Calculate column value output size for beautification of csv output.
+	 *
+	 * @param value
+	 *            the value
+	 * @throws CsvDataException
+	 *             the csv data exception
+	 */
+	public int calculateOutputSizesOfValue(Object value) throws CsvDataException {
+		return escapeValue(value).length();
+	}
+
+	/**
 	 * Close this writer and its underlying stream.
 	 */
 	@Override

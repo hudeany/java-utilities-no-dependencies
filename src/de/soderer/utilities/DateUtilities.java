@@ -41,6 +41,9 @@ public class DateUtilities {
 	public static final SimpleDateFormat ISO_8601_DATETIME_FORMAT_NO_TIMEZONE = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 	/** DateTime format for SOAP Webservices (ISO 8601) */
 	public static final SimpleDateFormat ISO_8601_DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
+	
+	/** ANSI SQL standard date format */
+	public static final SimpleDateFormat ANSI_SQL_DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	public static String getWochenTagNamensKuerzel(GregorianCalendar datum) {
 		int tagesInt = datum.get(Calendar.DAY_OF_WEEK);
