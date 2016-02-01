@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
@@ -41,7 +42,8 @@ public class DbUtilities {
 		MySQL("com.mysql.jdbc.Driver", 3306),
 		PostgreSQL("org.postgresql.Driver", 5432),
 		SQLite("org.sqlite.JDBC", 0),
-		Derby("org.apache.derby.jdbc.EmbeddedDriver", 0);
+		Derby("org.apache.derby.jdbc.EmbeddedDriver", 0),
+		HSQL("org.hsqldb.jdbc.JDBCDriver", 0);
 		
 		public static DbVendor getDbVendorByName(String dbVendorName) throws Exception {
 			if ("oracle".equalsIgnoreCase(dbVendorName)) {
@@ -54,6 +56,8 @@ public class DbUtilities {
 				return DbUtilities.DbVendor.SQLite;
 			} else if ("derby".equalsIgnoreCase(dbVendorName)) {
 				return DbUtilities.DbVendor.Derby;
+			} else if ("hsql".equalsIgnoreCase(dbVendorName) || "hypersql".equalsIgnoreCase(dbVendorName)) {
+				return DbUtilities.DbVendor.HSQL;
 			} else {
 				throw new Exception("Unknown db vendor: " + dbVendorName);
 			}
@@ -86,9 +90,59 @@ public class DbUtilities {
 		} else if (DbVendor.SQLite == dbVendor) {
 			return "jdbc:sqlite:" + dbName.replace("~", System.getProperty("user.home"));
 		} else if (DbVendor.Derby == dbVendor) {
-			return "jdbc:derby:" + dbName.replace("~", System.getProperty("user.home") + ";create=false");
+			return "jdbc:derby:" + dbName.replace("~", System.getProperty("user.home"));
+		} else if (DbVendor.HSQL == dbVendor) {
+			dbName = dbName.replace("~", System.getProperty("user.home"));
+			if (dbName.startsWith("/")) {
+				return "jdbc:hsqldb:file:" + dbName + ";shutdown=true";
+			} else if (Utilities.isNotBlank(dbServerHostname)) {
+				if (!dbServerHostname.toLowerCase().startsWith("http")) {
+					dbServerHostname = "http://" + dbServerHostname;
+				}
+				if (dbServerHostname.toLowerCase().startsWith("https://") && dbServerPort == 443) {
+					dbServerPort = -1;
+				} else if (dbServerHostname.toLowerCase().startsWith("http://") && dbServerPort == 80) {
+					dbServerPort = -1;
+				}
+				return "jdbc:hsqldb:" + dbServerHostname + (dbServerPort <= 0 ? "" : ":" + dbServerPort) + "/" + dbName;
+			} else {
+				return "jdbc:hsqldb:mem:" + dbName;
+			}
 		} else {
 			throw new Exception("Unknown db vendor");
+		}
+	}
+	
+	public static Connection createNewDatabase(DbVendor dbVendor, String dbPath) throws Exception {
+		if (dbVendor == null) {
+			throw new Exception("Unknown db vendor");
+		}
+		
+		Class.forName(dbVendor.getDriverClassName());
+	
+		if (dbVendor == DbVendor.SQLite) {
+			dbPath = dbPath.replace("~", System.getProperty("user.home"));
+			if (new File(dbPath).exists()) {
+				throw new Exception("SQLite db file '" + dbPath + "' already exists");
+			}
+			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbPath));
+		} else if (dbVendor == DbVendor.Derby) {
+			dbPath = dbPath.replace("~", System.getProperty("user.home"));
+			if (new File(dbPath).exists()) {
+				throw new Exception("Derby db directory '" + dbPath + "' already exists");
+			}
+			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbPath) + ";create=true");
+		} else if (dbVendor == DbVendor.HSQL) {
+			dbPath = dbPath.replace("~", System.getProperty("user.home"));
+			if (dbPath.startsWith("/")) {
+				if (getFilesByPattern(new File(dbPath.substring(0, dbPath.lastIndexOf("/"))), dbPath.substring(dbPath.lastIndexOf("/") + 1).replace(".", "\\.") + "\\..*", false).size() > 0) {
+					throw new Exception("HSQL db '" + dbPath + "' already exists");
+				}
+			}
+
+			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbPath));
+		} else {
+			throw new Exception("Invalid db vendor '" + dbVendor.toString() + "'. Only SQLite or Derby db can be created this way.");
 		}
 	}
 	
@@ -103,14 +157,37 @@ public class DbUtilities {
 			dbName = dbName.replace("~", System.getProperty("user.home"));
 			if (!new File(dbName).exists()) {
 				throw new Exception("SQLite db file '" + dbName + "' is not available");
+			} else if (!new File(dbName).isFile()) {
+				throw new Exception("SQLite db file '" + dbName + "' is not a file");
 			}
 			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbName));
 		} else if (dbVendor == DbVendor.Derby) {
 			dbName = dbName.replace("~", System.getProperty("user.home"));
 			if (!new File(dbName).exists()) {
-				throw new Exception("Derby db file '" + dbName + "' is not available");
+				throw new Exception("Derby db directory '" + dbName + "' is not available");
+			} else if (!new File(dbName).isDirectory()) {
+				throw new Exception("Derby db directory '" + dbName + "' is not a directory");
 			}
 			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbName));
+		} else if (dbVendor == DbVendor.HSQL) {
+			dbName = dbName.replace("~", System.getProperty("user.home"));
+			if (dbName.startsWith("/")) {
+				if (getFilesByPattern(new File(dbName.substring(0, dbName.lastIndexOf("/"))), dbName.substring(dbName.lastIndexOf("/") + 1).replace(".", "\\.") + "\\..*", false).size() <= 0) {
+					throw new Exception("HSQL db directory '" + dbName + "' is not a directory");
+				}
+			}
+			int port;
+			String[] hostParts = hostname.split(":");
+			if (hostParts.length == 2) {
+				try {
+					port = Integer.parseInt(hostParts[1]);
+				} catch (Exception e) {
+					throw new Exception("Invalid port: " + hostParts[1]);
+				}
+			} else {
+				port = dbVendor.getDefaultPort();
+			}
+			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, hostParts[0], port, dbName), (Utilities.isNotEmpty(userName) ? userName : "SA"), (password != null ? new String(password) : ""));
 		} else {
 			int port;
 			String[] hostParts = hostname.split(":");
@@ -662,6 +739,8 @@ public class DbUtilities {
 					return DbVendor.SQLite;
 				} else if (productName != null && productName.toLowerCase().contains("derby")) {
 					return DbVendor.Derby;
+				} else if (productName != null && productName.toLowerCase().contains("hsql")) {
+					return DbVendor.HSQL;
 				} else {
 					throw new Exception("Unknown db vendor: " + productName);
 				}
@@ -743,6 +822,36 @@ public class DbUtilities {
 							return false;
 						}
 					}
+				}
+			}
+			return true;
+		} finally {
+			closeQuietly(resultSet);
+			resultSet = null;
+			closeQuietly(statement);
+			statement = null;
+		}
+	}
+	
+	public static boolean checkTableExist(Connection connection, String tableName) throws Exception {
+		return checkTableExist(connection, tableName, false);
+	}
+
+	public static boolean checkTableExist(Connection connection, String tableName, boolean throwExceptionOnError) throws Exception {
+		Statement statement = null;
+		ResultSet resultSet = null;
+
+		try {
+			statement = connection.createStatement();
+
+			// Check if table exists
+			try {
+				resultSet = statement.executeQuery("SELECT * FROM " + tableName + " WHERE 1 = 0");
+			} catch (Exception e) {
+				if (throwExceptionOnError) {
+					throw new Exception("Table '" + tableName + "' does not exist");
+				} else {
+					return false;
 				}
 			}
 			return true;
@@ -1564,7 +1673,7 @@ public class DbUtilities {
 				tableQuery = "SELECT DISTINCT table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog')";
 				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
 					if (Utilities.isNotBlank(tablePattern)) {
-						tablePattern = tablePattern.trim().toUpperCase().replace("%", "\\%").replace("_", "\\_").replace("*", "%").replace("?", "_");
+						tablePattern = tablePattern.trim().replace("%", "\\%").replace("_", "\\_").replace("*", "%").replace("?", "_");
 						if (tablePattern.startsWith("!")) {
 							tableQuery += " AND table_name NOT LIKE '" + tablePattern.substring(1) + "' ESCAPE '\\'";
 						} else {
@@ -1600,7 +1709,7 @@ public class DbUtilities {
 					tableNamesToExport.add(resultSet.getString("name"));
 				}
 				return tableNamesToExport;
-			}  else if (DbVendor.Derby == dbVendor) {
+			} else if (DbVendor.Derby == dbVendor) {
 				tableQuery = "SELECT tablename FROM sys.systables WHERE tabletype = 'T'";
 				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
 					if (Utilities.isNotBlank(tablePattern)) {
@@ -1618,6 +1727,26 @@ public class DbUtilities {
 				List<String> tableNamesToExport = new ArrayList<String>();
 				while (resultSet.next()) {
 					tableNamesToExport.add(resultSet.getString("tablename"));
+				}
+				return tableNamesToExport;
+			} else if (DbVendor.HSQL == dbVendor) {
+				tableQuery = "SELECT * FROM information_schema.system_tables WHERE table_type = 'TABLE' AND table_schem = 'PUBLIC'";
+				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
+					if (Utilities.isNotBlank(tablePattern)) {
+						tablePattern = tablePattern.trim().toUpperCase().replace("%", "\\%").replace("_", "\\_").replace("*", "%").replace("?", "_");
+						if (tablePattern.startsWith("!")) {
+							tableQuery += " AND table_name NOT LIKE '" + tablePattern.substring(1) + "' ESCAPE '\\'";
+						} else {
+							tableQuery += " AND table_name LIKE '" + tablePattern + "' ESCAPE '\\'";
+						}
+					}
+				}
+				//tableQuery += " ORDER BY name";
+				
+				resultSet = statement.executeQuery(tableQuery);
+				List<String> tableNamesToExport = new ArrayList<String>();
+				while (resultSet.next()) {
+					tableNamesToExport.add(resultSet.getString("table_name"));
 				}
 				return tableNamesToExport;
 			} else {
@@ -1642,5 +1771,26 @@ public class DbUtilities {
 				}
 			}
 		}
+	}
+	
+	private static List<File> getFilesByPattern(File startDirectory, String patternString, boolean traverseCompletely) {
+		return getFilesByPattern(startDirectory, Pattern.compile(patternString), traverseCompletely);
+	}
+
+	private static List<File> getFilesByPattern(File startDirectory, Pattern pattern, boolean traverseCompletely) {
+		List<File> files = new ArrayList<File>();
+		if (startDirectory.isDirectory()) {
+			for (File file : startDirectory.listFiles()) {
+				if (file.isDirectory()) {
+					files.add(file);
+					if (traverseCompletely) {
+						files.addAll(getFilesByPattern(file, pattern, traverseCompletely));
+					}
+				} else if (file.isFile() && pattern.matcher(file.getName()).matches()) {
+					files.add(file);
+				}
+			}
+		}
+		return files;
 	}
 }
