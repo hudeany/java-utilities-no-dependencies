@@ -18,6 +18,10 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class SecureDataKeyStore {
 	private File keystoreFile;
+	
+	/**
+	 * First key is class name of entries grouped by their class name, second key is the entry name
+	 */
 	private Map<String, Map<String, SecureDataEntry>> dataEntries = new HashMap<String, Map<String, SecureDataEntry>>();
 
 	public SecureDataKeyStore(File keystoreFile) {
@@ -55,7 +59,7 @@ public class SecureDataKeyStore {
 				if (dataEntries.get(secureDataEntryClassName) == null) {
 					dataEntries.put(secureDataEntryClassName, new HashMap<String, SecureDataEntry>());
 				}
-				dataEntries.get(secureDataEntryClassName).put(newDataEntry.getEntryName(), newDataEntry);
+				dataEntries.get(secureDataEntryClassName).put(keyAlias.substring(secureDataEntryClassName.length() + 1), newDataEntry);
 			}
 		} finally {
 			Arrays.fill(passwordArray, '\u0000');

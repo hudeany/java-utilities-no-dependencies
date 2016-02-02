@@ -30,6 +30,11 @@ public class CredentialsDialog extends JDialog {
 	private Credentials credentials = null;
 
 	public CredentialsDialog(final Frame parent, String title, String text, boolean aquireUsername, boolean aquirePassword) {
+		this(parent, title, text, aquireUsername, aquirePassword, "Username", "Password", "OK", "Cancel");
+	}
+	
+	public CredentialsDialog(final Frame parent, String title, String text, boolean aquireUsername, boolean aquirePassword,
+			String text_Username, String text_Password, String text_OK, String text_Cancel) {
 		super(parent, title, Dialog.ModalityType.DOCUMENT_MODAL);
 
 		final CredentialsDialog credentialsDialog = this;
@@ -62,7 +67,7 @@ public class CredentialsDialog extends JDialog {
 			// User Panel
 			JPanel userPanel = new JPanel();
 			userPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
-			JLabel userLabel = new JLabel("Username");
+			JLabel userLabel = new JLabel(text_Username);
 			userPanel.add(userLabel);
 			userField = new JTextField();
 			userField.setPreferredSize(new Dimension(200, userField.getPreferredSize().height));
@@ -74,7 +79,7 @@ public class CredentialsDialog extends JDialog {
 			// Password Panel
 			JPanel passwordPanel = new JPanel();
 			passwordPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
-			JLabel passwordLabel = new JLabel("Password");
+			JLabel passwordLabel = new JLabel(text_Password);
 			passwordPanel.add(passwordLabel);
 			passwordField = new JPasswordField();
 			passwordField.setPreferredSize(new Dimension(200, passwordField.getPreferredSize().height));
@@ -87,7 +92,7 @@ public class CredentialsDialog extends JDialog {
 		buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.LINE_AXIS));
 
 		// ok Button
-		JButton okButton = new JButton("OK");
+		JButton okButton = new JButton(text_OK);
 		okButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
@@ -106,7 +111,7 @@ public class CredentialsDialog extends JDialog {
 		buttonPanel.add(Box.createRigidArea(new Dimension(5, 0)));
 
 		// Close Button
-		JButton closeButton = new JButton("Cancel");
+		JButton closeButton = new JButton(text_Cancel);
 		closeButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
