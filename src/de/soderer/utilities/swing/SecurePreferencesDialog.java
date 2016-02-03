@@ -6,8 +6,11 @@ import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 
+import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -68,8 +71,6 @@ public class SecurePreferencesDialog extends JDialog {
 		this.text_Password = text_Password;
 		this.text_OK = text_OK;
 		this.text_Cancel = text_Cancel;
-
-		final SecurePreferencesDialog dialog = this;
 		
 		this.securePreferencesFile = securePreferencesFile;
 
@@ -86,6 +87,7 @@ public class SecurePreferencesDialog extends JDialog {
 		interimPanel.add(Box.createRigidArea(new Dimension(5, 0)));
 		
 		JPanel comboPanel = new JPanel();
+		comboPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
 		comboPanel.setLayout(new BoxLayout(comboPanel, BoxLayout.PAGE_AXIS));
 		
 		newNameField = new JTextField();
@@ -109,6 +111,7 @@ public class SecurePreferencesDialog extends JDialog {
 		comboPanel.add(newNameField);
 		
 		preferencesTable = new JTable(new DefaultTableModel(0, 1));
+		preferencesTable.setBorder(BorderFactory.createLineBorder(Color.GRAY));
 		preferencesTable.setToolTipText(text);
 		preferencesTable.getSelectionModel().addListSelectionListener(new ListSelectionListener(){
 	        public void valueChanged(ListSelectionEvent event) {
@@ -117,6 +120,20 @@ public class SecurePreferencesDialog extends JDialog {
 	        	deleteButton.setEnabled(preferencesTable.getSelectedRows().length > 0);
 	        }
 	    });
+		preferencesTable.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent event) {
+				if (event.getClickCount() >= 2) {
+			        int rowIndex = preferencesTable.rowAtPoint(event.getPoint());
+			        if (rowIndex >= 0) {
+			        	DefaultTableModel tableModel = (DefaultTableModel) preferencesTable.getModel();
+						String entryName = (String) tableModel.getValueAt(rowIndex, 0);
+						currentSecureDataEntry = secureDataKeyStore.getEntry(currentSecureDataEntry.getClass(), entryName);
+						dispose();
+			        }
+				}
+			}
+		});
 		comboPanel.add(preferencesTable);
 		
 		interimPanel.add(comboPanel);
@@ -217,7 +234,7 @@ public class SecurePreferencesDialog extends JDialog {
 		deleteButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				if (preferencesTable.getSelectedRows().length >= 0) {
+				if (preferencesTable.getSelectedRows().length > 0) {
 					DefaultTableModel tableModel = (DefaultTableModel) preferencesTable.getModel();
 					for (int i = preferencesTable.getSelectedRows().length - 1; i >= 0; i--) {
 						int rowNum = preferencesTable.getSelectedRows()[i];
@@ -225,7 +242,20 @@ public class SecurePreferencesDialog extends JDialog {
 						secureDataKeyStore.remove(currentSecureDataEntry.getClass(), entryName);
 						tableModel.removeRow(rowNum);
 					}
-					dialog.pack();
+					if (getPassword() == null) {
+						CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
+						credentialsDialog.setVisible(true);
+						if (credentialsDialog.getCredentials() != null) {
+							setPassword(credentialsDialog.getCredentials().getPassword());
+						} else {
+							setPassword(null);
+						}
+					}
+					if (getPassword() != null) {
+						secureDataKeyStore.saveKeyStore(getPassword());
+						currentSecureDataEntry = null;
+						dispose();
+					}
 				}
 			}
 		});
@@ -242,6 +272,32 @@ public class SecurePreferencesDialog extends JDialog {
 		saveButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
+				if (Utilities.isNotBlank(newNameField.getText())) {
+					currentSecureDataEntry.setEntryName(newNameField.getText());
+					secureDataKeyStore.addEntry(currentSecureDataEntry);
+				} else if (preferencesTable.getSelectedRows().length == 1) {
+					DefaultTableModel tableModel = (DefaultTableModel) preferencesTable.getModel();
+					for (int rowNum : preferencesTable.getSelectedRows()) {
+						String entryName = (String) tableModel.getValueAt(rowNum, 0);
+						currentSecureDataEntry.setEntryName(entryName);
+						secureDataKeyStore.addEntry(currentSecureDataEntry);
+						if (getPassword() == null) {
+							CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
+							credentialsDialog.setVisible(true);
+							if (credentialsDialog.getCredentials() != null) {
+								setPassword(credentialsDialog.getCredentials().getPassword());
+							} else {
+								setPassword(null);
+							}
+						}
+						if (getPassword() != null) {
+							secureDataKeyStore.saveKeyStore(getPassword());
+							currentSecureDataEntry = null;
+							dispose();
+						}
+					}
+				}
+				
 				CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
 				credentialsDialog.setVisible(true);
 				if (credentialsDialog.getCredentials() != null) {

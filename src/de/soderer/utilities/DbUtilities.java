@@ -23,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
@@ -139,7 +141,11 @@ public class DbUtilities {
 					throw new Exception("HSQL db '" + dbPath + "' already exists");
 				}
 			}
-
+			
+			// Logger must be kept in a local variable for making it work
+			Logger dbLogger = Logger.getLogger("hsqldb.db");
+			dbLogger.setLevel(Level.WARNING);
+			
 			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbPath));
 		} else {
 			throw new Exception("Invalid db vendor '" + dbVendor.toString() + "'. Only SQLite or Derby db can be created this way.");
@@ -187,6 +193,11 @@ public class DbUtilities {
 			} else {
 				port = dbVendor.getDefaultPort();
 			}
+			
+			// Logger must be kept in a local variable for making it work
+			Logger dbLogger = Logger.getLogger("hsqldb.db");
+			dbLogger.setLevel(Level.WARNING);
+			
 			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, hostParts[0], port, dbName), (Utilities.isNotEmpty(userName) ? userName : "SA"), (password != null ? new String(password) : ""));
 		} else {
 			int port;

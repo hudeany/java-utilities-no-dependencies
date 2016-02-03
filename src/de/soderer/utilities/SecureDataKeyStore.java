@@ -59,7 +59,7 @@ public class SecureDataKeyStore {
 				if (dataEntries.get(secureDataEntryClassName) == null) {
 					dataEntries.put(secureDataEntryClassName, new HashMap<String, SecureDataEntry>());
 				}
-				dataEntries.get(secureDataEntryClassName).put(keyAlias.substring(secureDataEntryClassName.length() + 1), newDataEntry);
+				dataEntries.get(secureDataEntryClassName).put(newDataEntry.getEntryName(), newDataEntry);
 			}
 		} finally {
 			Arrays.fill(passwordArray, '\u0000');
@@ -76,8 +76,9 @@ public class SecureDataKeyStore {
 
 			fos = new FileOutputStream(keystoreFile);
 			for (Entry<String, Map<String, SecureDataEntry>> entryMap : dataEntries.entrySet()) {
+				int i = 1;
 				for (Entry<String, SecureDataEntry> entry : entryMap.getValue().entrySet()) {
-					keyStore.setKeyEntry(entryMap.getKey() + "/" + entry.getKey(),
+					keyStore.setKeyEntry(entryMap.getKey() + "/" + (i++),
 							new SecretKeySpec(("\"" + entry.getValue().getClass().getName() + "\"," + CsvWriter.getCsvLine(',', '"', entry.getValue().getStorageData())).getBytes("UTF-8"), "AES"),
 							passwordArray, null);
 				}
