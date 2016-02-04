@@ -24,11 +24,11 @@
     </target>
 
 	<target name="create_jar" depends="compile">
-		<jar destfile="${buildPath}/JavaUtilities_${version}.jar">
+		<jar destfile="${buildPath}/JavaUtilities-${version}.jar">
 			<fileset dir="bin" />
 		</jar>
 		
-		<jar destfile="${buildPath}/JavaUtilities_${version}_sources.jar">
+		<jar destfile="${buildPath}/JavaUtilities-${version}_sources.jar">
 			<fileset dir="bin" />
 		    <fileset dir="src" includes="**/*.java"/>
 		</jar>
