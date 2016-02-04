@@ -3,11 +3,13 @@ package de.soderer.utilities;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,7 +46,14 @@ public class NetworkUtilities {
 
 	public static boolean ping(String ipOrHostname) {
 		try {
-			return InetAddress.getByName(getHostnameFromRequestString(ipOrHostname)).isReachable(5000);
+			if (ipOrHostname.toLowerCase().contains("https://")) {
+				URL server = new URL("https://" + getHostnameFromRequestString(ipOrHostname));
+				HttpURLConnection connection = (HttpURLConnection) server.openConnection();
+				connection.connect();
+				return true;
+			} else {
+				return InetAddress.getByName(getHostnameFromRequestString(ipOrHostname)).isReachable(5000);
+			}
 		} catch (Exception e) {
 			return false;
 		}
