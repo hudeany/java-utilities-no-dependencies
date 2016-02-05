@@ -24,6 +24,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 
+import de.soderer.utilities.LangResources;
 import de.soderer.utilities.SecureDataEntry;
 import de.soderer.utilities.SecureDataKeyStore;
 import de.soderer.utilities.Utilities;
@@ -398,7 +399,7 @@ public class SecurePreferencesDialog extends JDialog {
 			}
 		} catch (Exception e) {
 			setPassword(null);
-			TextDialog textDialog = new TextDialog((Frame) getParent(), "ERROR", "ERROR:\n" + e.getMessage(), Color.RED);
+			TextDialog textDialog = new TextDialog((Frame) getParent(), "ERROR", "ERROR:\n" + e.getMessage(), LangResources.get("close"), false, Color.RED);
 			textDialog.setVisible(true);
 		}
 	}

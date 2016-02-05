@@ -7,6 +7,7 @@ import java.util.Date;
 import javax.swing.JFrame;
 
 import de.soderer.utilities.Credentials;
+import de.soderer.utilities.LangResources;
 import de.soderer.utilities.UpdateParent;
 import de.soderer.utilities.Version;
 
@@ -39,7 +40,7 @@ public class BasicUpdateableGuiApplication extends JFrame implements UpdateParen
 			updateProgressDialog = null;
 		}
 		
-		new TextDialog(this, "Update Error", errorText, Color.PINK).setVisible(true);
+		new TextDialog(this, "Update Error", errorText, LangResources.get("close"), false, Color.PINK).setVisible(true);
 	}
 
 	@Override
@@ -62,7 +63,7 @@ public class BasicUpdateableGuiApplication extends JFrame implements UpdateParen
 	@Override
 	public boolean askForUpdate(String availableNewVersion) throws Exception {
 		if (availableNewVersion == null) {
-			TextDialog textDialog = new TextDialog(this, "Update", "There is no newer version available for " + applicationName + "\nThe current local version is " + applicationVersion.toString(), Color.WHITE);
+			TextDialog textDialog = new TextDialog(this, "Update", "There is no newer version available for " + applicationName + "\nThe current local version is " + applicationVersion.toString(), LangResources.get("close"));
 			textDialog.setVisible(true);
 			return false;
 		} else {

@@ -18,23 +18,41 @@ import javax.swing.JTextArea;
 
 public class TextDialog extends JDialog {
 	private static final long serialVersionUID = 2020023796052296409L;
+	
+	public TextDialog(final Frame parent, String title, String text, String closeButtonText) {
+		this(parent, title, text, closeButtonText, true, Color.WHITE);
+	}
+	
+	public TextDialog(final Frame parent, String title, String text, String closeButtonText, Color backgroundcolor) {
+		this(parent, title, text, closeButtonText, true, backgroundcolor);
+	}
+	
+	public TextDialog(final Frame parent, String title, String text, String closeButtonText, boolean wrapLines) {
+		this(parent, title, text, closeButtonText, wrapLines, Color.WHITE);
+	}
 
-	public TextDialog(final Frame parent, String title, String text, Color backgroundcolor) {
+	public TextDialog(final Frame parent, String title, String text, String closeButtonText, boolean wrapLines, Color backgroundcolor) {
 		super(parent, title, Dialog.ModalityType.DOCUMENT_MODAL);
-
-		final TextDialog textDialog = this;
 
 		setResizable(false);
 
 		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
-
+		
 		JTextArea textField = new JTextArea();
-		textField.setText(text);
 		textField.setEditable(false);
+		textField.setTabSize(4);
+		textField.setText(text);
+		
+		if (wrapLines) {
+			textField.setLineWrap(true);
+			textField.setWrapStyleWord(true);
+		}
+		
 		if (backgroundcolor != null) {
 			textField.setBackground(backgroundcolor);
 		}
+		
 		JScrollPane textScrollpane = new JScrollPane(textField);
 		textScrollpane.setPreferredSize(new Dimension(400, 200));
 		
@@ -48,11 +66,11 @@ public class TextDialog extends JDialog {
 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
-		JButton cancelButton = new JButton("Close");
+		JButton cancelButton = new JButton(closeButtonText);
 		cancelButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				textDialog.dispose();
+				dispose();
 			}
 		});
 		buttonPanel.add(cancelButton);
