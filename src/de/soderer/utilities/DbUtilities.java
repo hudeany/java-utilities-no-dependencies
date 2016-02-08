@@ -43,6 +43,7 @@ public class DbUtilities {
 		Oracle("oracle.jdbc.OracleDriver", 1521),
 		MySQL("com.mysql.jdbc.Driver", 3306),
 		PostgreSQL("org.postgresql.Driver", 5432),
+		Firebird("org.firebirdsql.jdbc.FBDriver", 3050),
 		SQLite("org.sqlite.JDBC", 0),
 		Derby("org.apache.derby.jdbc.EmbeddedDriver", 0),
 		HSQL("org.hsqldb.jdbc.JDBCDriver", 0);
@@ -60,6 +61,8 @@ public class DbUtilities {
 				return DbUtilities.DbVendor.Derby;
 			} else if ("hsql".equalsIgnoreCase(dbVendorName) || "hypersql".equalsIgnoreCase(dbVendorName)) {
 				return DbUtilities.DbVendor.HSQL;
+			} else if ("firebird".equalsIgnoreCase(dbVendorName)) {
+				return DbUtilities.DbVendor.Firebird;
 			} else {
 				throw new Exception("Unknown db vendor: " + dbVendorName);
 			}
@@ -93,6 +96,8 @@ public class DbUtilities {
 			return "jdbc:sqlite:" + dbName.replace("~", System.getProperty("user.home"));
 		} else if (DbVendor.Derby == dbVendor) {
 			return "jdbc:derby:" + dbName.replace("~", System.getProperty("user.home"));
+		} else if (DbVendor.Firebird == dbVendor) {
+			return "jdbc:firebirdsql:" + dbServerHostname + "/" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + ":" + dbName.replace("~", System.getProperty("user.home"));
 		} else if (DbVendor.HSQL == dbVendor) {
 			dbName = dbName.replace("~", System.getProperty("user.home"));
 			if (dbName.startsWith("/")) {
@@ -752,6 +757,8 @@ public class DbUtilities {
 					return DbVendor.Derby;
 				} else if (productName != null && productName.toLowerCase().contains("hsql")) {
 					return DbVendor.HSQL;
+				} else if (productName != null && productName.toLowerCase().contains("firebird")) {
+					return DbVendor.Firebird;
 				} else {
 					throw new Exception("Unknown db vendor: " + productName);
 				}
@@ -1740,8 +1747,28 @@ public class DbUtilities {
 					tableNamesToExport.add(resultSet.getString("tablename"));
 				}
 				return tableNamesToExport;
+			} else if (DbVendor.Firebird == dbVendor) {
+				tableQuery = "SELECT TRIM(rdb$relation_name) AS table_name FROM rdb$relations WHERE rdb$view_blr IS NULL AND (rdb$system_flag IS NULL OR rdb$system_flag = 0)";
+				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
+					if (Utilities.isNotBlank(tablePattern)) {
+						tablePattern = tablePattern.trim().toUpperCase().replace("%", "\\%").replace("_", "\\_").replace("*", "%").replace("?", "_");
+						if (tablePattern.startsWith("!")) {
+							tableQuery += " AND TRIM(rdb$relation_name) NOT LIKE '" + tablePattern.substring(1) + "' ESCAPE '\\'";
+						} else {
+							tableQuery += " AND TRIM(rdb$relation_name) LIKE '" + tablePattern + "' ESCAPE '\\'";
+						}
+					}
+				}
+				tableQuery += " ORDER BY rdb$relation_name";
+				
+				resultSet = statement.executeQuery(tableQuery);
+				List<String> tableNamesToExport = new ArrayList<String>();
+				while (resultSet.next()) {
+					tableNamesToExport.add(resultSet.getString("table_name"));
+				}
+				return tableNamesToExport;
 			} else if (DbVendor.HSQL == dbVendor) {
-				tableQuery = "SELECT * FROM information_schema.system_tables WHERE table_type = 'TABLE' AND table_schem = 'PUBLIC'";
+				tableQuery = "SELECT table_name FROM information_schema.system_tables WHERE table_type = 'TABLE' AND table_schem = 'PUBLIC'";
 				for (String tablePattern : tablePatternExpression.split(",| |;|\\||\n")) {
 					if (Utilities.isNotBlank(tablePattern)) {
 						tablePattern = tablePattern.trim().toUpperCase().replace("%", "\\%").replace("_", "\\_").replace("*", "%").replace("?", "_");
@@ -1752,7 +1779,7 @@ public class DbUtilities {
 						}
 					}
 				}
-				//tableQuery += " ORDER BY name";
+				tableQuery += " ORDER BY table_name";
 				
 				resultSet = statement.executeQuery(tableQuery);
 				List<String> tableNamesToExport = new ArrayList<String>();
