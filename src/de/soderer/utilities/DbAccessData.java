@@ -47,8 +47,8 @@ public class DbAccessData extends SecureDataEntry {
 	}
 
 	@Override
-	public Object[] getStorageData() {
-		return new Object[] { entryName, isOracle, dbServerHostname, dbServerPort, dbName, dbTable, userName, password };
+	public String[] getStorageData() {
+		return new String[] { entryName, Boolean.toString(isOracle), dbServerHostname, Integer.toString(dbServerPort), dbName, dbTable, userName, password };
 	}
 
 	public boolean equals(DbAccessData otherData) {

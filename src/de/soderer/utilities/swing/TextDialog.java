@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Frame;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -19,19 +19,19 @@ import javax.swing.JTextArea;
 public class TextDialog extends JDialog {
 	private static final long serialVersionUID = 2020023796052296409L;
 	
-	public TextDialog(final Frame parent, String title, String text, String closeButtonText) {
+	public TextDialog(Window parent, String title, String text, String closeButtonText) {
 		this(parent, title, text, closeButtonText, true, Color.WHITE);
 	}
 	
-	public TextDialog(final Frame parent, String title, String text, String closeButtonText, Color backgroundcolor) {
+	public TextDialog(Window parent, String title, String text, String closeButtonText, Color backgroundcolor) {
 		this(parent, title, text, closeButtonText, true, backgroundcolor);
 	}
 	
-	public TextDialog(final Frame parent, String title, String text, String closeButtonText, boolean wrapLines) {
+	public TextDialog(Window parent, String title, String text, String closeButtonText, boolean wrapLines) {
 		this(parent, title, text, closeButtonText, wrapLines, Color.WHITE);
 	}
 
-	public TextDialog(final Frame parent, String title, String text, String closeButtonText, boolean wrapLines, Color backgroundcolor) {
+	public TextDialog(Window parent, String title, String text, String closeButtonText, boolean wrapLines, Color backgroundcolor) {
 		super(parent, title, Dialog.ModalityType.DOCUMENT_MODAL);
 
 		setResizable(false);

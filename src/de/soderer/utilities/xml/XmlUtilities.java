@@ -784,6 +784,21 @@ public class XmlUtilities {
 	 *            the tag value
 	 * @return the element
 	 */
+	public static Element appendTextValueNode(Node baseNode, String tagName, double tagValue) {
+		return appendTextValueNode(baseNode, tagName, Double.toString(tagValue));
+	}
+
+	/**
+	 * Append text value node.
+	 *
+	 * @param baseNode
+	 *            the base node
+	 * @param tagName
+	 *            the tag name
+	 * @param tagValue
+	 *            the tag value
+	 * @return the element
+	 */
 	public static Element appendTextValueNode(Node baseNode, String tagName, String tagValue) {
 		Element newNode = appendNode(baseNode, tagName);
 		if (tagValue == null) {

@@ -260,14 +260,29 @@ public class Utilities {
 	}
 
 	/**
-	 * Check for a number
+	 * Check for a number without decimals
 	 *
 	 * @param value
 	 * @return
 	 */
-	public static boolean isNumber(String value) {
+	public static boolean isInteger(String value) {
 		try {
 			Integer.parseInt(value);
+			return true;
+		} catch (NumberFormatException e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Check for a number with optional decimals after a dot(.) and exponent
+	 *
+	 * @param value
+	 * @return
+	 */
+	public static boolean isDouble(String value) {
+		try {
+			Double.parseDouble(value);
 			return true;
 		} catch (NumberFormatException e) {
 			return false;
@@ -856,6 +871,14 @@ public class Utilities {
 		return !isEmpty(value);
 	}
 
+	public static boolean isEmpty(Collection<?> collection) {
+		return collection == null || collection.isEmpty();
+	}
+
+	public static boolean isNotEmpty(Collection<?> collection) {
+		return !isEmpty(collection);
+	}
+
 	public static boolean isBlank(String value) {
 		return value == null || value.length() == 0 || value.trim().length() == 0;
 	}
@@ -1236,5 +1259,107 @@ public class Utilities {
 		} else {
 			return value;
 		}
+	}
+	
+	public static List<String> splitAndTrimList(String stringList) {
+		if (stringList == null) {
+			return null;
+		} else {
+			List<String> returnList = new ArrayList<String>();
+			String[] parts = stringList.split(",|;|\\|| |\\n|\\r|\\t");
+			for (String part : parts) {
+				returnList.add(part.trim());
+			}
+			return returnList;
+		}
+	}
+	
+	public static List<String> splitAndTrimList(String stringList, Character... separatorChars) {
+		if (stringList == null) {
+			return null;
+		} else {
+			List<String> returnList = new ArrayList<String>();
+			String[] parts = stringList.split(join(separatorChars, "|").replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r"));
+			for (String part : parts) {
+				returnList.add(part.trim());
+			}
+			return returnList;
+		}
+	}
+
+	public static boolean endsWithIgnoreCase(String data, String suffix) {
+		if (data == suffix) {
+			// both null or same object
+			return true;
+		} else if (data == null) {
+			// data is null but suffix is not
+			return false;
+		} else if (suffix == null) {
+			// suffix is null but data is not
+			return true;
+		} else if (data.toLowerCase().endsWith(suffix.toLowerCase())) {
+			// both are set, so ignore the case for standard endsWith-method
+			return true;
+		} else {
+			// anything else
+			return false;
+		}
+	}
+
+	public static int indexOfIgnoreCase(String data, String part) {
+		if (data == part) {
+			// both null or same object
+			return 0;
+		} else if (data == null || part == null) {
+			// suffix is null but data is not or vice versa
+			return -1;
+		} else {
+			// anything else
+			return data.toLowerCase().indexOf(part.toLowerCase());
+		}
+	}
+
+	public static List<String> splitAndTrimListQuoted(String stringList, char... separatorChars) {
+		List<String> returnList = new ArrayList<String>();
+		StringBuilder nextLine = new StringBuilder();
+		boolean quotedBySingleQoute = false;
+		boolean quotedByDoubleQoute = false;
+		for (char nextChar : stringList.toCharArray()) {
+			if ('\'' == nextChar) {
+				if (!quotedBySingleQoute && !quotedByDoubleQoute) {
+					quotedBySingleQoute = true;
+				} else if (quotedBySingleQoute) {
+					quotedBySingleQoute = false;
+				}
+			} else if ('"' == nextChar) {
+				if (!quotedBySingleQoute && !quotedByDoubleQoute) {
+					quotedByDoubleQoute = true;
+				} else if (quotedByDoubleQoute) {
+					quotedByDoubleQoute = false;
+				}
+			}
+			
+			boolean splitFound = false;
+			for (char separatorChar : separatorChars) {
+				if (separatorChar == nextChar && !quotedBySingleQoute && !quotedByDoubleQoute) {
+					String line = nextLine.toString().trim();
+					if (line.length() > 0) {
+						returnList.add(line);
+						splitFound = true;
+					}
+					nextLine = new StringBuilder();
+					break;
+				}
+			}
+			
+			if (!splitFound) {
+				nextLine.append(nextChar);
+			}
+		}
+		String line = nextLine.toString().trim();
+		if (line.length() > 0) {
+			returnList.add(line);
+		}
+		return returnList;
 	}
 }

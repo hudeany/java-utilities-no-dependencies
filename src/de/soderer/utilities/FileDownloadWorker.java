@@ -6,7 +6,6 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Date;
 
 public class FileDownloadWorker extends WorkerSimple<Boolean> {
 	private String downloadUrl;
@@ -20,11 +19,7 @@ public class FileDownloadWorker extends WorkerSimple<Boolean> {
 	}
 
 	@Override
-	public void run() {
-		startTime = new Date();
-		itemsToDo = 0L;
-		itemsDone = 0L;
-		result = null;
+	public Boolean work() throws Exception {
 		showProgress();
 
 		try {
@@ -67,15 +62,13 @@ public class FileDownloadWorker extends WorkerSimple<Boolean> {
 
 			if (cancel) {
 				destinationFile.delete();
+				return false;
 			} else {
 				showProgress(true);
-				result = true;
+				return true;
 			}
 		} catch (Exception e) {
-			error = e;
-			result = false;
+			throw e;
 		}
-
-		showDone();
 	}
 }

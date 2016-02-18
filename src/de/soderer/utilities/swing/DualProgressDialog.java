@@ -2,7 +2,7 @@ package de.soderer.utilities.swing;
 
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Frame;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Date;
@@ -24,10 +24,10 @@ public class DualProgressDialog<T extends WorkerDual<?>> extends SimpleProgressD
 	private JProgressBar subItemProgressBar;
 
 	public DualProgressDialog(WorkerParentDual parent, String title) {
-		this((Frame) parent, title, null);
+		this((Window) parent, title, null);
 	}
 
-	public DualProgressDialog(Frame parent, String title, T worker) {
+	public DualProgressDialog(Window parent, String title, T worker) {
 		super(parent);
 		
 		setTitle(title);
@@ -79,7 +79,7 @@ public class DualProgressDialog<T extends WorkerDual<?>> extends SimpleProgressD
 
 		pack();
 
-        setLocationRelativeTo((Frame) parent);
+        setLocationRelativeTo((Window) parent);
 		
 		if (cancelButton != null) {
 			getRootPane().setDefaultButton(cancelButton);

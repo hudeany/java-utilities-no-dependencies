@@ -2,16 +2,16 @@ package de.soderer.utilities;
 
 public class DbColumnType {
 	public enum SimpleDataType {
-		String, Date, Number
+		String, Date, Integer, Double, Blob, Clob
 	}
 
 	private String typeName;
-	private int characterLength; // only for VARCHAR and VARCHAR2 types
+	private long characterLength; // only for VARCHAR and VARCHAR2 types
 	private int numericPrecision; // only for numeric types
 	private int numericScale; // only for numeric types
 	private boolean nullable;
 
-	public DbColumnType(String typeName, int characterLength, int numericPrecision, int numericScale, boolean nullable) {
+	public DbColumnType(String typeName, long characterLength, int numericPrecision, int numericScale, boolean nullable) {
 		this.typeName = typeName;
 		this.characterLength = characterLength;
 		this.numericPrecision = numericPrecision;
@@ -23,7 +23,7 @@ public class DbColumnType {
 		return typeName;
 	}
 
-	public int getCharacterLength() {
+	public long getCharacterLength() {
 		return characterLength;
 	}
 
@@ -42,10 +42,16 @@ public class DbColumnType {
 	public SimpleDataType getSimpleDataType() {
 		if (typeName.toLowerCase().startsWith("date") || typeName.toLowerCase().startsWith("time")) {
 			return SimpleDataType.Date;
-		} else if (typeName.toLowerCase().startsWith("varchar") || typeName.equalsIgnoreCase("clob")) {
+		} else if (typeName.toLowerCase().startsWith("varchar") || typeName.equalsIgnoreCase("clob") || typeName.toLowerCase().contains("text")) {
 			return SimpleDataType.String;
+		} else if (typeName.toLowerCase().equals("blob")) {
+			return SimpleDataType.Blob;
+		} else if (typeName.toLowerCase().equals("clob") || typeName.toLowerCase().equals("longtext")) {
+			return SimpleDataType.Clob;
+		} else if (typeName.toLowerCase().contains("int")) {
+			return SimpleDataType.Integer;
 		} else {
-			return SimpleDataType.Number;
+			return SimpleDataType.Double;
 		}
 	}
 }

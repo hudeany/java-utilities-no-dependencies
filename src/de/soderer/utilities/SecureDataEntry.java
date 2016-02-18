@@ -5,7 +5,7 @@ import java.util.List;
 public abstract class SecureDataEntry {
 	public abstract void loadData(List<String> dataParts) throws Exception;
 
-	public abstract Object[] getStorageData();
+	public abstract String[] getStorageData();
 
 	protected String entryName;
 

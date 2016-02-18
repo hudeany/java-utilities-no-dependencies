@@ -9,19 +9,19 @@ import java.util.concurrent.TimeoutException;
 public abstract class WorkerSimple<T> implements RunnableFuture<T> {
 	private static final long DEFAULT_SHOW_PROGRESS_AFTER_MILLISECONDS = 500;
 
-	protected Date startTime;
-	protected Date endTime;
+	private Date startTime;
+	private Date endTime;
 	protected long itemsToDo = -1;
 	protected long itemsDone = -1;
 	protected Date lastProgressShow = new Date();
 	protected long showProgressAfterMilliseconds = DEFAULT_SHOW_PROGRESS_AFTER_MILLISECONDS;
-	protected T result = null;
+	private T result = null;
 
 	protected WorkerParentSimple parent;
 
-	protected Exception error = null;
+	private Exception error = null;
 	protected boolean cancel = false;
-	protected boolean isDone = false;
+	private boolean isDone = false;
 
 	public WorkerSimple(WorkerParentSimple parent) {
 		this.parent = parent;
@@ -55,14 +55,6 @@ public abstract class WorkerSimple<T> implements RunnableFuture<T> {
 				parent.showProgress(startTime, itemsToDo, itemsDone);
 				lastProgressShow = new Date();
 			}
-		}
-	}
-
-	protected void showDone() {
-		endTime = new Date();
-		isDone = true;
-		if (parent != null) {
-			parent.showDone(startTime, endTime, itemsDone);
 		}
 	}
 
@@ -119,6 +111,10 @@ public abstract class WorkerSimple<T> implements RunnableFuture<T> {
 		return startTime;
 	}
 
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+
 	public Date getEndTime() {
 		return endTime;
 	}
@@ -132,5 +128,29 @@ public abstract class WorkerSimple<T> implements RunnableFuture<T> {
 	}
 
 	@Override
-	public abstract void run();
+	public final void run() {
+		result = null;
+		error = null;
+		cancel = false;
+		isDone = false;
+		itemsToDo = 0L;
+		itemsDone = 0L;
+		startTime = new Date();
+		
+		try {
+			result = work();
+		} catch (Exception e) {
+			error = e;
+		}
+		
+		if (endTime == null) {
+			endTime = new Date();
+		}
+		isDone = true;
+		if (parent != null) {
+			parent.showDone(startTime, endTime, itemsDone);
+		}
+	}
+	
+	public abstract T work() throws Exception;
 }

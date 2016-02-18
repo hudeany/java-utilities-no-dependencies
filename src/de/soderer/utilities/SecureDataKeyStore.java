@@ -79,7 +79,7 @@ public class SecureDataKeyStore {
 				int i = 1;
 				for (Entry<String, SecureDataEntry> entry : entryMap.getValue().entrySet()) {
 					keyStore.setKeyEntry(entryMap.getKey() + "/" + (i++),
-							new SecretKeySpec(("\"" + entry.getValue().getClass().getName() + "\"," + CsvWriter.getCsvLine(',', '"', entry.getValue().getStorageData())).getBytes("UTF-8"), "AES"),
+							new SecretKeySpec(("\"" + entry.getValue().getClass().getName() + "\"," + CsvWriter.getCsvLine(',', '"', (Object[]) entry.getValue().getStorageData())).getBytes("UTF-8"), "AES"),
 							passwordArray, null);
 				}
 			}

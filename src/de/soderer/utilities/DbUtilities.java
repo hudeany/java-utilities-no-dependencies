@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.BatchUpdateException;
+import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -17,11 +18,14 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,6 +33,7 @@ import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
+import de.soderer.utilities.DbColumnType.SimpleDataType;
 import de.soderer.utilities.collection.CaseInsensitiveMap;
 
 public class DbUtilities {
@@ -87,7 +92,12 @@ public class DbUtilities {
 
 	public static String generateUrlConnectionString(DbVendor dbVendor, String dbServerHostname, int dbServerPort, String dbName) throws Exception {
 		if (DbVendor.Oracle == dbVendor) {
-			return "jdbc:oracle:thin:@" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + ":" + dbName;
+			if (dbName.startsWith("/")) {
+				// Some Oracle databases only accept the SID separated by a "/"
+				return "jdbc:oracle:thin:@" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + dbName;
+			} else {
+				return "jdbc:oracle:thin:@" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + ":" + dbName;
+			}
 		} else if (DbVendor.MySQL == dbVendor) {
 			return "jdbc:mysql://" + dbServerHostname + ":" + (dbServerPort <= 0 ? dbVendor.defaultPort : dbServerPort) + "/" + dbName + "?useEncoding=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull";
 		} else if (DbVendor.PostgreSQL == dbVendor) {
@@ -290,7 +300,19 @@ public class DbUtilities {
 			while (resultSet.next()) {
 				List<String> values = new ArrayList<String>();
 				for (int i = 1; i <= metaData.getColumnCount(); i++) {
-					values.add(resultSet.getString(i));
+					if (metaData.getColumnType(i) == Types.BLOB) {
+						Blob blob = resultSet.getBlob(i);
+						if (resultSet.wasNull()) {
+							values.add("");
+						} else {
+							try (InputStream input = blob.getBinaryStream()) {
+								byte[] data = Utilities.toByteArray(input);
+								values.add(Base64.getEncoder().encodeToString(data));
+							}
+						}
+					} else {
+						values.add(resultSet.getString(i));
+					}
 				}
 				tableDataString.append(CsvWriter.getCsvLine(separator, '"', values));
 				tableDataString.append("\n");
@@ -322,11 +344,41 @@ public class DbUtilities {
 	}
 
 	public static String readoutTable(DataSource dataSource, String tableName, char separator) throws Exception {
-		return readout(dataSource, "SELECT * FROM " + tableName, separator);
+		Connection connection = null;
+		try {
+			connection = dataSource.getConnection();
+
+			return readoutTable(connection, tableName, separator);
+		} finally {
+			if (connection != null) {
+				connection.close();
+			}
+		}
 	}
 
 	public static String readoutTable(Connection connection, String tableName, char separator) throws Exception {
-		return readout(connection, "SELECT * FROM " + tableName, separator);
+		if (connection == null) {
+			throw new Exception("Invalid empty connection for getColumnNames");
+		} else if (Utilities.isBlank(tableName)) {
+			throw new Exception("Invalid empty tableName for getColumnNames");
+		} else {
+			List<String> columnNames = getColumnNames(connection, tableName);
+			Collections.sort(columnNames);
+			List<String> keyColumnNames = getPrimaryKeyColumns(connection, tableName);
+			Collections.sort(keyColumnNames);
+			List<String> readoutColumns = new ArrayList<String>();
+			readoutColumns.addAll(keyColumnNames);
+			for (String columnName : columnNames) {
+				if (!readoutColumns.contains(columnName)) {
+					readoutColumns.add(columnName);
+				}
+			}
+			String orderPart = "";
+			if (!keyColumnNames.isEmpty()) {
+				orderPart = " ORDER BY " + Utilities.join(keyColumnNames, ", ");
+			}
+			return readout(connection, "SELECT " + Utilities.join(readoutColumns, ", ") + " FROM " + tableName + orderPart, separator);
+		}
 	}
 
 	public static Map<Integer, Object[]> insertDataInTable(DataSource dataSource, String tableName, String[] tableColumns, List<Object[]> dataSets, boolean commitOnFullSuccessOnly) throws Exception {
@@ -343,7 +395,7 @@ public class DbUtilities {
 			previousAutoCommit = connection.getAutoCommit();
 			connection.setAutoCommit(false);
 
-			checkTableAndColumnsExist(connection, tableName, tableColumns, true);
+			checkTableAndColumnsExist(connection, tableName, true, tableColumns);
 
 			// Insert data
 			Map<Integer, Object[]> notInsertedData = new HashMap<Integer, Object[]>();
@@ -548,7 +600,7 @@ public class DbUtilities {
 				}
 			}
 
-			checkTableAndColumnsExist(connection, tableName, columnMapping, true);
+			checkTableAndColumnsExist(connection, tableName, true, columnMapping);
 
 			List<String> dbColumns = new ArrayList<String>();
 			for (String column : columnMapping) {
@@ -793,21 +845,21 @@ public class DbUtilities {
 		}
 	}
 
-	public static boolean checkTableAndColumnsExist(Connection connection, String tableName, String[] columns) throws Exception {
-		return checkTableAndColumnsExist(connection, tableName, columns, false);
+	public static boolean checkTableAndColumnsExist(Connection connection, String tableName, String... columns) throws Exception {
+		return checkTableAndColumnsExist(connection, tableName, false, columns);
 	}
 
-	public static boolean checkTableAndColumnsExist(DataSource dataSource, String tableName, String[] columns, boolean throwExceptionOnError) throws Exception {
+	public static boolean checkTableAndColumnsExist(DataSource dataSource, String tableName, boolean throwExceptionOnError, String... columns) throws Exception {
 		Connection connection = null;
 		try {
 			connection = dataSource.getConnection();
-			return checkTableAndColumnsExist(connection, tableName, columns, throwExceptionOnError);
+			return checkTableAndColumnsExist(connection, tableName, throwExceptionOnError, columns);
 		} finally {
 			closeQuietly(connection);
 		}
 	}
 
-	public static boolean checkTableAndColumnsExist(Connection connection, String tableName, String[] columns, boolean throwExceptionOnError) throws Exception {
+	public static boolean checkTableAndColumnsExist(Connection connection, String tableName, boolean throwExceptionOnError, String... columns) throws Exception {
 		Statement statement = null;
 		ResultSet resultSet = null;
 
@@ -995,18 +1047,32 @@ public class DbUtilities {
 			closeQuietly(connection);
 		}
 	}
-
+	
 	public static List<String> getColumnNames(DataSource dataSource, String tableName) throws Exception {
 		if (dataSource == null) {
 			throw new Exception("Invalid empty dataSource for getColumnNames");
+		}
+		
+		Connection connection = null;
+		try {
+			connection = dataSource.getConnection();
+			return getColumnNames(connection, tableName);
+		} catch (SQLException e) {
+			throw new RuntimeException("Cannot read columns for table " + tableName + ": " + e.getMessage(), e);
+		} finally {
+			closeQuietly(connection);
+		}
+	}
+
+	public static List<String> getColumnNames(Connection connection, String tableName) throws Exception {
+		if (connection == null) {
+			throw new Exception("Invalid empty connection for getColumnNames");
 		} else if (Utilities.isBlank(tableName)) {
 			throw new Exception("Invalid empty tableName for getColumnNames");
 		} else {
-			Connection connection = null;
 			Statement statement = null;
 			ResultSet resultSet = null;
 			try {
-				connection = dataSource.getConnection();
 				statement = connection.createStatement();
 				String sql = "SELECT * FROM " + getSQLSafeString(tableName) + " WHERE 1 = 0";
 				resultSet = statement.executeQuery(sql);
@@ -1018,7 +1084,6 @@ public class DbUtilities {
 			} finally {
 				closeQuietly(resultSet);
 				closeQuietly(statement);
-				closeQuietly(connection);
 			}
 		}
 	}
@@ -1123,7 +1188,7 @@ public class DbUtilities {
 			}
 		}
 	}
-
+	
 	public static CaseInsensitiveMap<DbColumnType> getColumnDataTypes(DataSource dataSource, String tableName) throws Exception {
 		if (dataSource == null) {
 			throw new Exception("Invalid empty dataSource for getColumnDataTypes");
@@ -1131,11 +1196,27 @@ public class DbUtilities {
 			throw new Exception("Invalid empty tableName for getColumnDataTypes");
 		} else {
 			Connection connection = null;
+			try {
+				connection = dataSource.getConnection();
+				return getColumnDataTypes(connection, tableName);
+			} catch (Exception e) {
+				throw e;
+			} finally {
+				closeQuietly(connection);
+			}
+		}
+	}
+
+	public static CaseInsensitiveMap<DbColumnType> getColumnDataTypes(Connection connection, String tableName) throws Exception {
+		if (connection == null) {
+			throw new Exception("Invalid empty connection for getColumnDataTypes");
+		} else if (Utilities.isBlank(tableName)) {
+			throw new Exception("Invalid empty tableName for getColumnDataTypes");
+		} else {
 			PreparedStatement preparedStatement = null;
 			ResultSet resultSet = null;
 			try {
 				CaseInsensitiveMap<DbColumnType> returnMap = new CaseInsensitiveMap<DbColumnType>();
-				connection = dataSource.getConnection();
 				DbVendor dbVendor = getDbVendor(connection);
 				if (DbVendor.Oracle == dbVendor) {
 					// Watchout: Oracle's timestamp datatype is "TIMESTAMP(6)", so remove the bracket value
@@ -1166,7 +1247,7 @@ public class DbUtilities {
 					preparedStatement.setString(1, tableName);
 					resultSet = preparedStatement.executeQuery();
 					while (resultSet.next()) {
-						int characterLength = resultSet.getInt("character_maximum_length");
+						long characterLength = resultSet.getLong("character_maximum_length");
 						if (resultSet.wasNull()) {
 							characterLength = -1;
 						}
@@ -1191,7 +1272,6 @@ public class DbUtilities {
 			} finally {
 				closeQuietly(resultSet);
 				closeQuietly(preparedStatement);
-				closeQuietly(connection);
 			}
 		}
 	}
@@ -1595,34 +1675,38 @@ public class DbUtilities {
 		}
 	}
 
-	public static String getPrimaryKeyColumn(DataSource dataSource, String tableName) {
+	public static List<String> getPrimaryKeyColumns(DataSource dataSource, String tableName) {
 		Connection connection = null;
 		try {
 			connection = dataSource.getConnection();
-			return getPrimaryKeyColumn(connection, tableName);
+			return getPrimaryKeyColumns(connection, tableName);
 		} catch (SQLException e) {
-			throw new RuntimeException("Cannot read primarykey column for table " + tableName + ": " + e.getMessage(), e);
+			throw new RuntimeException("Cannot read primarykey columns for table " + tableName + ": " + e.getMessage(), e);
 		} finally {
 			closeQuietly(connection);
 		}
 	}
 
-	public static String getPrimaryKeyColumn(Connection connection, String tableName) {
+	public static List<String> getPrimaryKeyColumns(Connection connection, String tableName) {
 		if (Utilities.isBlank(tableName)) {
 			return null;
 		} else {
 			ResultSet resultSet = null;
 			try {
+				if (getDbVendor(connection) == DbVendor.Oracle) {
+					tableName = tableName.toUpperCase();
+				}
+				
 				DatabaseMetaData metaData = connection.getMetaData();
 				resultSet = metaData.getPrimaryKeys(null, null, tableName);
 
-				if (resultSet.next()) {
-					return resultSet.getString("COLUMN_NAME");
-				} else {
-					return null;
+				List<String> returnList = new ArrayList<String>();
+				while (resultSet.next()) {
+					returnList.add(resultSet.getString("COLUMN_NAME"));
 				}
+				return returnList;
 			} catch (Exception e) {
-				throw new RuntimeException("Cannot read primarykey column for table " + tableName + ": " + e.getMessage(), e);
+				throw new RuntimeException("Cannot read primarykey columns for table " + tableName + ": " + e.getMessage(), e);
 			} finally {
 				closeQuietly(resultSet);
 				resultSet = null;
@@ -1830,5 +1914,62 @@ public class DbUtilities {
 			}
 		}
 		return files;
+	}
+
+	public static void createTable(Connection connection, String tablename, Map<String, SimpleDataType> columnsAndTypes, List<String> keyColumns) throws Exception {
+		if  (keyColumns != null) {
+			for (String keyColumn : keyColumns) {
+				if (!columnsAndTypes.containsKey(keyColumn)) {
+					throw new Exception("Cannot create table. Keycolumn '" + keyColumn + "' is not included in column types");
+				}
+			}
+		}
+		
+		Statement statement = null;
+		try {
+			DbVendor dbVendor = DbUtilities.getDbVendor(connection);
+			
+			String columnPart = "";
+			for (Entry<String, SimpleDataType> columnAndType : columnsAndTypes.entrySet()) {
+				if (columnPart.length() > 0) {
+					columnPart += ", ";
+				}
+				columnPart += columnAndType.getKey() + " " + DbUtilities.getDataType(dbVendor, columnAndType.getValue());
+			}
+			
+			statement = connection.createStatement();
+			statement.execute("CREATE TABLE " + tablename + " (" + columnPart + ")");
+			if (Utilities.isNotEmpty(keyColumns)) {
+				statement.execute("ALTER TABLE " + tablename + " ADD PRIMARY KEY (" + Utilities.join(keyColumns, ", ") + ")");
+			}
+		} finally {
+			Utilities.closeQuietly(statement);
+		}
+	}
+
+	private static String getDataType(DbVendor dbVendor, SimpleDataType simpleDataType) throws Exception {
+		if (dbVendor == DbVendor.Oracle) {
+			switch (simpleDataType) {
+				case Blob: return "BLOB";
+				case Clob: return "CLOB";
+				case Date: return "TIMESTAMP";
+				case Integer: return "NUMBER";
+				case Double: return "NUMBER";
+				case String: return "VARCHAR2(4000)";
+				default: return "VARCHAR2(4000)";
+			}
+		} else if (dbVendor == DbVendor.MySQL) {
+			switch (simpleDataType) {
+				case Blob: return "LONGBLOB";
+				case Clob: return "LONGTEXT";
+				case Date: return "TIMESTAMP NULL";
+				case Integer: return "INT";
+				case Double: return "DOUBLE";
+				case String: return "VARCHAR(4000)";
+				default: return "VARCHAR(4000)";
+			}
+		} else {
+			throw new Exception("Cannot get datatype: " + dbVendor + "/" + simpleDataType);
+		}
 	}
 }

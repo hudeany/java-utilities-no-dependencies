@@ -28,8 +28,8 @@ public class SimpleCredentialsData extends SecureDataEntry {
 	}
 
 	@Override
-	public Object[] getStorageData() {
-		return new Object[] { entryName, userName, password };
+	public String[] getStorageData() {
+		return new String[] { entryName, userName, new String(password) };
 	}
 
 	public boolean equals(SimpleCredentialsData otherData) {

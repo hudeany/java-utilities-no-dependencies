@@ -3,7 +3,7 @@ package de.soderer.utilities.swing;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Frame;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Date;
@@ -32,15 +32,15 @@ public class SimpleProgressDialog<T extends WorkerSimple<?>> extends JDialog imp
 	protected JProgressBar progressBar;
 	protected boolean canceledByUser = false;
 	
-	protected SimpleProgressDialog(Frame parent) {
+	protected SimpleProgressDialog(Window parent) {
 		super(parent, Dialog.ModalityType.DOCUMENT_MODAL);
 	}
 	
 	public SimpleProgressDialog(WorkerParentSimple parent, String title) {
-		this((Frame) parent, title, (T) null);
+		this((Window) parent, title, (T) null);
 	}
 
-	public SimpleProgressDialog(Frame parent, String title, T worker) {
+	public SimpleProgressDialog(Window parent, String title, T worker) {
 		this(parent);
 		
 		setTitle(title);
@@ -79,7 +79,7 @@ public class SimpleProgressDialog<T extends WorkerSimple<?>> extends JDialog imp
 
 		pack();
 
-		setLocationRelativeTo((Frame) parent);
+		setLocationRelativeTo((Window) parent);
 		
 		if (cancelButton != null) {
 			getRootPane().setDefaultButton(cancelButton);

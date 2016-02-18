@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Frame;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -21,7 +21,7 @@ public class QuestionDialog extends JDialog {
 	
 	private int answerButtonIndex = -1;
 
-	public QuestionDialog(final Frame parent, String title, String text, String... buttonTexts) {
+	public QuestionDialog(Window parent, String title, String text, String... buttonTexts) {
 		super(parent, title, Dialog.ModalityType.DOCUMENT_MODAL);
 
 		final QuestionDialog questionDialog = this;

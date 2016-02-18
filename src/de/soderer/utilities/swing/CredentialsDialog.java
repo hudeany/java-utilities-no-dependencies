@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Frame;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -29,11 +29,11 @@ public class CredentialsDialog extends JDialog {
 	
 	private Credentials credentials = null;
 
-	public CredentialsDialog(final Frame parent, String title, String text, boolean aquireUsername, boolean aquirePassword) {
+	public CredentialsDialog(Window parent, String title, String text, boolean aquireUsername, boolean aquirePassword) {
 		this(parent, title, text, aquireUsername, aquirePassword, "Username", "Password", "OK", "Cancel");
 	}
 	
-	public CredentialsDialog(final Frame parent, String title, String text, boolean aquireUsername, boolean aquirePassword,
+	public CredentialsDialog(Window parent, String title, String text, boolean aquireUsername, boolean aquirePassword,
 			String text_Username, String text_Password, String text_OK, String text_Cancel) {
 		super(parent, title, Dialog.ModalityType.DOCUMENT_MODAL);
 

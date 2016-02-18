@@ -3,7 +3,7 @@ package de.soderer.utilities.swing;
 import java.awt.Color;
 import java.awt.Dialog;
 import java.awt.Dimension;
-import java.awt.Frame;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -56,13 +56,13 @@ public class SecurePreferencesDialog extends JDialog {
 	private JTextField newNameField;
 	private JTable preferencesTable;
 
-	public SecurePreferencesDialog(final Frame parent, String title, String text, File securePreferencesFile) {
+	public SecurePreferencesDialog(Window parent, String title, String text, File securePreferencesFile) {
 		this(parent, title, text, securePreferencesFile,
 			"Load", "Create", "Update", "Delete", "Save with new password", "Cancel", "Please enter password for secured preferences",
 			"Username", "Password", "OK", "Cancel");
 	}
 	
-	public SecurePreferencesDialog(final Frame parent, String title, String text, File securePreferencesFile,
+	public SecurePreferencesDialog(Window parent, String title, String text, File securePreferencesFile,
 			String textButton_Load, String textButton_Create, String textButton_Update, String textButton_Delete, String textButton_Save, String textButton_Cancel, final String text_PasswordText,
 			final String text_Username, final String text_Password, final String text_OK, final String text_Cancel) {
 		super(parent, title, Dialog.ModalityType.DOCUMENT_MODAL);
@@ -177,7 +177,7 @@ public class SecurePreferencesDialog extends JDialog {
 					currentSecureDataEntry.setEntryName(newNameField.getText());
 					secureDataKeyStore.addEntry(currentSecureDataEntry);
 					if (getPassword() == null) {
-						CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
+						CredentialsDialog credentialsDialog = new CredentialsDialog((Window) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
 						credentialsDialog.setVisible(true);
 						if (credentialsDialog.getCredentials() != null) {
 							setPassword(credentialsDialog.getCredentials().getPassword());
@@ -209,7 +209,7 @@ public class SecurePreferencesDialog extends JDialog {
 						currentSecureDataEntry.setEntryName(entryName);
 						secureDataKeyStore.addEntry(currentSecureDataEntry);
 						if (getPassword() == null) {
-							CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
+							CredentialsDialog credentialsDialog = new CredentialsDialog((Window) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
 							credentialsDialog.setVisible(true);
 							if (credentialsDialog.getCredentials() != null) {
 								setPassword(credentialsDialog.getCredentials().getPassword());
@@ -244,7 +244,7 @@ public class SecurePreferencesDialog extends JDialog {
 						tableModel.removeRow(rowNum);
 					}
 					if (getPassword() == null) {
-						CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
+						CredentialsDialog credentialsDialog = new CredentialsDialog((Window) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
 						credentialsDialog.setVisible(true);
 						if (credentialsDialog.getCredentials() != null) {
 							setPassword(credentialsDialog.getCredentials().getPassword());
@@ -283,7 +283,7 @@ public class SecurePreferencesDialog extends JDialog {
 						currentSecureDataEntry.setEntryName(entryName);
 						secureDataKeyStore.addEntry(currentSecureDataEntry);
 						if (getPassword() == null) {
-							CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
+							CredentialsDialog credentialsDialog = new CredentialsDialog((Window) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
 							credentialsDialog.setVisible(true);
 							if (credentialsDialog.getCredentials() != null) {
 								setPassword(credentialsDialog.getCredentials().getPassword());
@@ -299,7 +299,7 @@ public class SecurePreferencesDialog extends JDialog {
 					}
 				}
 				
-				CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
+				CredentialsDialog credentialsDialog = new CredentialsDialog((Window) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
 				credentialsDialog.setVisible(true);
 				if (credentialsDialog.getCredentials() != null) {
 					setPassword(credentialsDialog.getCredentials().getPassword());
@@ -373,7 +373,7 @@ public class SecurePreferencesDialog extends JDialog {
 					}
 					
 					if (getPassword() == null) {
-						CredentialsDialog credentialsDialog = new CredentialsDialog((Frame) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
+						CredentialsDialog credentialsDialog = new CredentialsDialog((Window) getParent(), getTitle(), text_PasswordText, false, true, text_Username, text_Password, text_OK, text_Cancel);
 						credentialsDialog.setVisible(true);
 						if (credentialsDialog.getCredentials() != null) {
 							setPassword(credentialsDialog.getCredentials().getPassword());
@@ -399,7 +399,7 @@ public class SecurePreferencesDialog extends JDialog {
 			}
 		} catch (Exception e) {
 			setPassword(null);
-			TextDialog textDialog = new TextDialog((Frame) getParent(), "ERROR", "ERROR:\n" + e.getMessage(), LangResources.get("close"), false, Color.RED);
+			TextDialog textDialog = new TextDialog((Window) getParent(), "ERROR", "ERROR:\n" + e.getMessage(), LangResources.get("close"), false, Color.RED);
 			textDialog.setVisible(true);
 		}
 	}

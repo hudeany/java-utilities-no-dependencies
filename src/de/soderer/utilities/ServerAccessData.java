@@ -49,8 +49,8 @@ public class ServerAccessData extends SecureDataEntry {
 	}
 
 	@Override
-	public Object[] getStorageData() {
-		return new Object[] { entryName, hostname, port, username, keyFile, password };
+	public String[] getStorageData() {
+		return new String[] { entryName, hostname, Integer.toString(port), username, keyFile, password };
 	}
 
 	public String getHostname() {
