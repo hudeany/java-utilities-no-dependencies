@@ -1362,4 +1362,28 @@ public class Utilities {
 		}
 		return returnList;
 	}
+
+	public static boolean containsIgnoreCase(Collection<String> list, String item) {
+		if (list == null) {
+			return false;
+		} else {
+			for (String listItem : list) {
+				if (listItem == item || (listItem != null && listItem.equalsIgnoreCase(item))) {
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+	
+	public static boolean delete(File file) {
+		if (file.isDirectory()) {
+			for (File subFile : file.listFiles()) {
+				if (!delete(subFile)) {
+					return false;
+				}
+			}
+		}
+		return file.delete();
+	}
 }

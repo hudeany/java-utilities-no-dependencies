@@ -42,15 +42,16 @@ public class DbColumnType {
 	public SimpleDataType getSimpleDataType() {
 		if (typeName.toLowerCase().startsWith("date") || typeName.toLowerCase().startsWith("time")) {
 			return SimpleDataType.Date;
-		} else if (typeName.toLowerCase().startsWith("varchar") || typeName.equalsIgnoreCase("clob") || typeName.toLowerCase().contains("text")) {
-			return SimpleDataType.String;
-		} else if (typeName.toLowerCase().equals("blob")) {
-			return SimpleDataType.Blob;
 		} else if (typeName.toLowerCase().equals("clob") || typeName.toLowerCase().equals("longtext")) {
 			return SimpleDataType.Clob;
+		} else if (typeName.toLowerCase().startsWith("varchar") || typeName.toLowerCase().contains("text") || typeName.toLowerCase().startsWith("character")) {
+			return SimpleDataType.String;
+		} else if (typeName.toLowerCase().equals("blob") || typeName.toLowerCase().equals("bytea")) {
+			return SimpleDataType.Blob;
 		} else if (typeName.toLowerCase().contains("int")) {
 			return SimpleDataType.Integer;
 		} else {
+			// e.g.: PostgreSQL "REAL"
 			return SimpleDataType.Double;
 		}
 	}

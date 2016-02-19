@@ -163,7 +163,38 @@ public class DbUtilities {
 			
 			return DriverManager.getConnection(DbUtilities.generateUrlConnectionString(dbVendor, "", 0, dbPath));
 		} else {
-			throw new Exception("Invalid db vendor '" + dbVendor.toString() + "'. Only SQLite or Derby db can be created this way.");
+			throw new Exception("Invalid db vendor '" + dbVendor.toString() + "'. Only SQLite, HSQL or Derby db can be created this way.");
+		}
+	}
+	
+	public static void deleteDatabase(DbVendor dbVendor, String dbPath) throws Exception {
+		if (dbVendor == null) {
+			throw new Exception("Unknown db vendor");
+		}
+	
+		if (dbVendor == DbVendor.SQLite) {
+			dbPath = dbPath.replace("~", System.getProperty("user.home"));
+			if (new File(dbPath).exists()) {
+				new File(dbPath).delete();
+			}
+		} else if (dbVendor == DbVendor.Derby) {
+			dbPath = dbPath.replace("~", System.getProperty("user.home"));
+			if (new File(dbPath).exists()) {
+				Utilities.delete(new File(dbPath));
+			}
+		} else if (dbVendor == DbVendor.HSQL) {
+			dbPath = dbPath.replace("~", System.getProperty("user.home"));
+			if (dbPath.startsWith("/")) {
+				File baseDirectory = new File(dbPath.substring(0, dbPath.lastIndexOf("/")));
+				String basename = dbPath.substring(dbPath.lastIndexOf("/") + 1);
+				for (File fileToDelete : baseDirectory.listFiles()) {
+					if (fileToDelete.getName().startsWith(basename)) {
+						Utilities.delete(fileToDelete);
+					}
+				}
+			}
+		} else {
+			throw new Exception("Invalid db vendor '" + dbVendor.toString() + "'. Only SQLite, HSQL or Derby db can be deleted this way.");
 		}
 	}
 	
@@ -280,11 +311,11 @@ public class DbUtilities {
 		}
 	}
 
-	public static String readout(Connection databaseConnection, String statementString, char separator) throws Exception {
+	public static String readout(Connection connection, String statementString, char separator) throws Exception {
 		Statement statement = null;
 		ResultSet resultSet = null;
 		try {
-			statement = databaseConnection.createStatement();
+			statement = connection.createStatement();
 			resultSet = statement.executeQuery(statementString);
 			StringBuilder tableDataString = new StringBuilder();
 			ResultSetMetaData metaData = resultSet.getMetaData();
@@ -300,14 +331,31 @@ public class DbUtilities {
 			while (resultSet.next()) {
 				List<String> values = new ArrayList<String>();
 				for (int i = 1; i <= metaData.getColumnCount(); i++) {
-					if (metaData.getColumnType(i) == Types.BLOB) {
-						Blob blob = resultSet.getBlob(i);
-						if (resultSet.wasNull()) {
-							values.add("");
+					if (metaData.getColumnType(i) == Types.BLOB || metaData.getColumnType(i) == Types.BINARY || metaData.getColumnType(i) == Types.VARBINARY || metaData.getColumnType(i) == Types.LONGVARBINARY) {
+						if (getDbVendor(connection) == DbVendor.SQLite || getDbVendor(connection) == DbVendor.PostgreSQL) {
+							// getBlob-method is not implemented by SQLite JDBC
+							resultSet.getObject(i);
+							if (resultSet.wasNull()) {
+								values.add("");
+							} else {
+								InputStream blobStream = null;
+								try {
+									blobStream = resultSet.getBinaryStream(i);
+									byte[] data = Utilities.toByteArray(blobStream);
+									values.add(Base64.getEncoder().encodeToString(data));
+								} finally {
+									Utilities.closeQuietly(blobStream);
+								}
+							}
 						} else {
-							try (InputStream input = blob.getBinaryStream()) {
-								byte[] data = Utilities.toByteArray(input);
-								values.add(Base64.getEncoder().encodeToString(data));
+							Blob blob = resultSet.getBlob(i);
+							if (resultSet.wasNull()) {
+								values.add("");
+							} else {
+								try (InputStream input = blob.getBinaryStream()) {
+									byte[] data = Utilities.toByteArray(input);
+									values.add(Base64.getEncoder().encodeToString(data));
+								}
 							}
 						}
 					} else {
@@ -369,7 +417,7 @@ public class DbUtilities {
 			List<String> readoutColumns = new ArrayList<String>();
 			readoutColumns.addAll(keyColumnNames);
 			for (String columnName : columnNames) {
-				if (!readoutColumns.contains(columnName)) {
+				if (!Utilities.containsIgnoreCase(readoutColumns, columnName)) {
 					readoutColumns.add(columnName);
 				}
 			}
@@ -1106,7 +1154,7 @@ public class DbUtilities {
 				DbVendor dbVendor = getDbVendor(connection);
 				if (DbVendor.Oracle == dbVendor) {
 					// Watchout: Oracle's timestamp datatype is "TIMESTAMP(6)", so remove the bracket value
-					String sql = "SELECT NVL(substr(data_type, 1, instr(data_type, '(') - 1), data_type) as data_type, data_length, data_precision, data_scale, nullable FROM user_tab_columns WHERE lower(table_name) = lower(?) AND lower(column_name) = lower(?)";
+					String sql = "SELECT NVL(substr(data_type, 1, instr(data_type, '(') - 1), data_type) as data_type, data_length, data_precision, data_scale, nullable FROM user_tab_columns WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?)";
 					preparedStatement = connection.prepareStatement(sql);
 					preparedStatement.setString(1, tableName);
 					preparedStatement.setString(2, columnName);
@@ -1132,7 +1180,7 @@ public class DbUtilities {
 						return null;
 					}
 				} else if (DbVendor.MySQL == dbVendor) {
-					String sql = "SELECT data_type, character_maximum_length, numeric_precision, numeric_scale, is_nullable FROM information_schema.columns WHERE table_schema = schema() AND lower(table_name) = lower(?) AND lower(column_name) = lower(?)";
+					String sql = "SELECT data_type, character_maximum_length, numeric_precision, numeric_scale, is_nullable FROM information_schema.columns WHERE table_schema = schema() AND LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?)";
 					preparedStatement = connection.prepareStatement(sql);
 					preparedStatement.setString(1, tableName);
 					preparedStatement.setString(2, columnName);
@@ -1220,7 +1268,7 @@ public class DbUtilities {
 				DbVendor dbVendor = getDbVendor(connection);
 				if (DbVendor.Oracle == dbVendor) {
 					// Watchout: Oracle's timestamp datatype is "TIMESTAMP(6)", so remove the bracket value
-					String sql = "SELECT column_name, NVL(substr(data_type, 1, instr(data_type, '(') - 1), data_type) as data_type, data_length, data_precision, data_scale, nullable FROM user_tab_columns WHERE lower(table_name) = lower(?)";
+					String sql = "SELECT column_name, NVL(substr(data_type, 1, instr(data_type, '(') - 1), data_type) as data_type, data_length, data_precision, data_scale, nullable FROM user_tab_columns WHERE LOWER(table_name) = LOWER(?)";
 					preparedStatement = connection.prepareStatement(sql);
 					preparedStatement.setString(1, tableName);
 					resultSet = preparedStatement.executeQuery();
@@ -1242,7 +1290,100 @@ public class DbUtilities {
 						returnMap.put(resultSet.getString("column_name"), new DbColumnType(resultSet.getString("data_type"), characterLength, numericPrecision, numericScale, isNullable));
 					}
 				} else if (DbVendor.MySQL == dbVendor) {
-					String sql = "SELECT column_name, data_type, character_maximum_length, numeric_precision, numeric_scale, is_nullable FROM information_schema.columns WHERE table_schema = schema() AND lower(table_name) = lower(?)";
+					String sql = "SELECT column_name, data_type, character_maximum_length, numeric_precision, numeric_scale, is_nullable FROM information_schema.columns WHERE table_schema = schema() AND LOWER(table_name) = LOWER(?)";
+					preparedStatement = connection.prepareStatement(sql);
+					preparedStatement.setString(1, tableName);
+					resultSet = preparedStatement.executeQuery();
+					while (resultSet.next()) {
+						long characterLength = resultSet.getLong("character_maximum_length");
+						if (resultSet.wasNull()) {
+							characterLength = -1;
+						}
+						int numericPrecision = resultSet.getInt("numeric_precision");
+						if (resultSet.wasNull()) {
+							numericPrecision = -1;
+						}
+						int numericScale = resultSet.getInt("numeric_scale");
+						if (resultSet.wasNull()) {
+							numericScale = -1;
+						}
+						boolean isNullable = resultSet.getString("is_nullable").equalsIgnoreCase("yes");
+
+						returnMap.put(resultSet.getString("column_name"), new DbColumnType(resultSet.getString("data_type"), characterLength, numericPrecision, numericScale, isNullable));
+					}
+				} else if (DbVendor.HSQL == dbVendor) {
+					String sql = "SELECT * FROM information_schema.system_columns WHERE LOWER(table_name) = LOWER(?)";
+					preparedStatement = connection.prepareStatement(sql);
+					preparedStatement.setString(1, tableName);
+					resultSet = preparedStatement.executeQuery();
+					while (resultSet.next()) {
+						long characterLength = resultSet.getLong("column_size");
+						if (resultSet.wasNull()) {
+							characterLength = -1;
+						}
+						int numericPrecision = resultSet.getInt("column_size");
+						if (resultSet.wasNull()) {
+							numericPrecision = -1;
+						}
+						int numericScale = resultSet.getInt("decimal_digits");
+						if (resultSet.wasNull()) {
+							numericScale = -1;
+						}
+						boolean isNullable = resultSet.getString("is_nullable").equalsIgnoreCase("yes");
+
+						returnMap.put(resultSet.getString("column_name"), new DbColumnType(resultSet.getString("type_name"), characterLength, numericPrecision, numericScale, isNullable));
+					}
+				} else if (DbVendor.Derby == dbVendor) {
+					String sql = "SELECT * FROM sys.systables, sys.syscolumns WHERE tableid = referenceid AND LOWER(tablename) = LOWER(?)";
+					preparedStatement = connection.prepareStatement(sql);
+					preparedStatement.setString(1, tableName);
+					resultSet = preparedStatement.executeQuery();
+					while (resultSet.next()) {
+						String type = resultSet.getString("columndatatype");
+						
+						long characterLength = -1;
+						int numericPrecision = -1;
+						int numericScale = -1;
+						
+						boolean isNullable;
+						if (type.toLowerCase().endsWith("not null")) {
+							isNullable = false;
+							type = type.substring(0, type.length() - 8).trim();
+						} else {
+							isNullable = true;
+						}
+						
+						if (type.contains("(")) {
+							characterLength = Long.parseLong(type.substring(type.indexOf("(") + 1, type.indexOf(")")));
+							type = type.substring(0, type.indexOf("("));
+						}
+
+						returnMap.put(resultSet.getString("columnname"), new DbColumnType(type, characterLength, numericPrecision, numericScale, isNullable));
+					}
+				} else if (DbVendor.Firebird == dbVendor) {
+					//TODO
+					throw new Exception("Unsupported db vendor");
+				} else if (DbVendor.SQLite == dbVendor) {
+					String sql = "PRAGMA table_info(" + tableName + ")";
+					preparedStatement = connection.prepareStatement(sql);
+					resultSet = preparedStatement.executeQuery();
+					while (resultSet.next()) {
+						long characterLength = -1;
+						int numericPrecision = -1;
+						int numericScale = -1;
+						boolean isNullable = resultSet.getInt("notnull") > 0;
+						
+						String type = resultSet.getString("type");
+						
+						if (type.contains("(")) {
+							characterLength = Long.parseLong(type.substring(type.indexOf("(") + 1, type.indexOf(")")));
+							type = type.substring(0, type.indexOf("("));
+						}
+
+						returnMap.put(resultSet.getString("name"), new DbColumnType(type, characterLength, numericPrecision, numericScale, isNullable));
+					}
+				} else if (DbVendor.PostgreSQL == dbVendor) {
+					String sql = "SELECT column_name, data_type, character_maximum_length, numeric_precision, numeric_scale, is_nullable FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA() AND LOWER(table_name) = LOWER(?)";
 					preparedStatement = connection.prepareStatement(sql);
 					preparedStatement.setString(1, tableName);
 					resultSet = preparedStatement.executeQuery();
@@ -1693,7 +1834,7 @@ public class DbUtilities {
 		} else {
 			ResultSet resultSet = null;
 			try {
-				if (getDbVendor(connection) == DbVendor.Oracle) {
+				if (getDbVendor(connection) == DbVendor.Oracle || getDbVendor(connection) == DbVendor.HSQL || getDbVendor(connection) == DbVendor.Derby) {
 					tableName = tableName.toUpperCase();
 				}
 				
@@ -1938,9 +2079,13 @@ public class DbUtilities {
 			}
 			
 			statement = connection.createStatement();
-			statement.execute("CREATE TABLE " + tablename + " (" + columnPart + ")");
+			String primaryKeyPart = "";
 			if (Utilities.isNotEmpty(keyColumns)) {
-				statement.execute("ALTER TABLE " + tablename + " ADD PRIMARY KEY (" + Utilities.join(keyColumns, ", ") + ")");
+				primaryKeyPart = ", PRIMARY KEY (" + Utilities.join(keyColumns, ", ") + ")";
+			}
+			statement.execute("CREATE TABLE " + tablename + " (" + columnPart + primaryKeyPart + ")");
+			if (getDbVendor(connection) == DbVendor.Derby) {
+				connection.commit();
 			}
 		} finally {
 			Utilities.closeQuietly(statement);
@@ -1968,6 +2113,49 @@ public class DbUtilities {
 				case String: return "VARCHAR(4000)";
 				default: return "VARCHAR(4000)";
 			}
+		} else if (dbVendor == DbVendor.HSQL) {
+			switch (simpleDataType) {
+				case Blob: return "BLOB";
+				case Clob: return "CLOB";
+				case Date: return "TIMESTAMP";
+				case Integer: return "INTEGER";
+				case Double: return "DOUBLE";
+				case String: return "VARCHAR(4000)";
+				default: return "VARCHAR(4000)";
+			}
+		} else if (dbVendor == DbVendor.PostgreSQL) {
+			switch (simpleDataType) {
+				case Blob: return "BYTEA";
+				case Clob: return "TEXT";
+				case Date: return "TIMESTAMP";
+				case Integer: return "INTEGER";
+				case Double: return "REAL";
+				case String: return "VARCHAR(4000)";
+				default: return "VARCHAR(4000)";
+			}
+		} else if (dbVendor == DbVendor.SQLite) {
+			switch (simpleDataType) {
+				case Blob: return "BLOB";
+				case Clob: return "CLOB";
+				case Date: return "TIMESTAMP";
+				case Integer: return "INTEGER";
+				case Double: return "DOUBLE";
+				case String: return "VARCHAR(4000)";
+				default: return "VARCHAR(4000)";
+			}
+		} else if (dbVendor == DbVendor.Derby) {
+			switch (simpleDataType) {
+				case Blob: return "BLOB";
+				case Clob: return "CLOB";
+				case Date: return "TIMESTAMP";
+				case Integer: return "INTEGER";
+				case Double: return "DOUBLE";
+				case String: return "VARCHAR(4000)";
+				default: return "VARCHAR(4000)";
+			}
+		} else if (dbVendor == DbVendor.Firebird) {
+			// TODO
+			throw new Exception("Cannot get datatype: " + dbVendor + "/" + simpleDataType);
 		} else {
 			throw new Exception("Cannot get datatype: " + dbVendor + "/" + simpleDataType);
 		}
