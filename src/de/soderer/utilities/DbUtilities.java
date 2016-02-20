@@ -2156,8 +2156,15 @@ public class DbUtilities {
 				default: return "VARCHAR";
 			}
 		} else if (dbVendor == DbVendor.Firebird) {
-			// TODO
-			throw new Exception("Cannot get datatype: " + dbVendor + "/" + simpleDataType);
+			switch (simpleDataType) {
+				case Blob: return "BLOB SUB_TYPE BINARY";
+				case Clob: return "BLOB SUB_TYPE TEXT";
+				case Date: return "TIMESTAMP";
+				case Integer: return "INTEGER";
+				case Double: return "DOUBLE PRECISION";
+				case String: return "VARCHAR";
+				default: return "VARCHAR";
+			}
 		} else {
 			throw new Exception("Cannot get datatype: " + dbVendor + "/" + simpleDataType);
 		}
