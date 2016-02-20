@@ -2057,7 +2057,7 @@ public class DbUtilities {
 		return files;
 	}
 
-	public static void createTable(Connection connection, String tablename, Map<String, SimpleDataType> columnsAndTypes, List<String> keyColumns) throws Exception {
+	public static void createTable(Connection connection, String tablename, Map<String, DbColumnType> columnsAndTypes, List<String> keyColumns) throws Exception {
 		if  (keyColumns != null) {
 			for (String keyColumn : keyColumns) {
 				if (!columnsAndTypes.containsKey(keyColumn)) {
@@ -2071,11 +2071,13 @@ public class DbUtilities {
 			DbVendor dbVendor = DbUtilities.getDbVendor(connection);
 			
 			String columnPart = "";
-			for (Entry<String, SimpleDataType> columnAndType : columnsAndTypes.entrySet()) {
+			for (Entry<String, DbColumnType> columnAndType : columnsAndTypes.entrySet()) {
 				if (columnPart.length() > 0) {
 					columnPart += ", ";
 				}
-				columnPart += columnAndType.getKey() + " " + DbUtilities.getDataType(dbVendor, columnAndType.getValue());
+				String dataType = DbUtilities.getDataType(dbVendor, columnAndType.getValue().getSimpleDataType());
+				int dataLength = dataType.toLowerCase().contains("varchar") ? (int) columnAndType.getValue().getCharacterLength() : 0;
+				columnPart += columnAndType.getKey() + " " + dataType + (dataLength > 0 ? "(" + dataLength + ")" : "");
 			}
 			
 			statement = connection.createStatement();
@@ -2100,8 +2102,8 @@ public class DbUtilities {
 				case Date: return "TIMESTAMP";
 				case Integer: return "NUMBER";
 				case Double: return "NUMBER";
-				case String: return "VARCHAR2(4000)";
-				default: return "VARCHAR2(4000)";
+				case String: return "VARCHAR2";
+				default: return "VARCHAR2";
 			}
 		} else if (dbVendor == DbVendor.MySQL) {
 			switch (simpleDataType) {
@@ -2110,8 +2112,8 @@ public class DbUtilities {
 				case Date: return "TIMESTAMP NULL";
 				case Integer: return "INT";
 				case Double: return "DOUBLE";
-				case String: return "VARCHAR(4000)";
-				default: return "VARCHAR(4000)";
+				case String: return "VARCHAR";
+				default: return "VARCHAR";
 			}
 		} else if (dbVendor == DbVendor.HSQL) {
 			switch (simpleDataType) {
@@ -2120,8 +2122,8 @@ public class DbUtilities {
 				case Date: return "TIMESTAMP";
 				case Integer: return "INTEGER";
 				case Double: return "DOUBLE";
-				case String: return "VARCHAR(4000)";
-				default: return "VARCHAR(4000)";
+				case String: return "VARCHAR";
+				default: return "VARCHAR";
 			}
 		} else if (dbVendor == DbVendor.PostgreSQL) {
 			switch (simpleDataType) {
@@ -2130,8 +2132,8 @@ public class DbUtilities {
 				case Date: return "TIMESTAMP";
 				case Integer: return "INTEGER";
 				case Double: return "REAL";
-				case String: return "VARCHAR(4000)";
-				default: return "VARCHAR(4000)";
+				case String: return "VARCHAR";
+				default: return "VARCHAR";
 			}
 		} else if (dbVendor == DbVendor.SQLite) {
 			switch (simpleDataType) {
@@ -2140,8 +2142,8 @@ public class DbUtilities {
 				case Date: return "TIMESTAMP";
 				case Integer: return "INTEGER";
 				case Double: return "DOUBLE";
-				case String: return "VARCHAR(4000)";
-				default: return "VARCHAR(4000)";
+				case String: return "VARCHAR";
+				default: return "VARCHAR";
 			}
 		} else if (dbVendor == DbVendor.Derby) {
 			switch (simpleDataType) {
@@ -2150,8 +2152,8 @@ public class DbUtilities {
 				case Date: return "TIMESTAMP";
 				case Integer: return "INTEGER";
 				case Double: return "DOUBLE";
-				case String: return "VARCHAR(4000)";
-				default: return "VARCHAR(4000)";
+				case String: return "VARCHAR";
+				default: return "VARCHAR";
 			}
 		} else if (dbVendor == DbVendor.Firebird) {
 			// TODO

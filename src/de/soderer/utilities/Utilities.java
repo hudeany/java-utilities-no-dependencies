@@ -45,6 +45,8 @@ import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import javax.xml.stream.XMLStreamWriter;
+
 /**
  * Global Utilities
  *
@@ -919,6 +921,17 @@ public class Utilities {
 			} catch (IOException e) {
 				// Do nothing
 			}
+		}
+	}
+
+	public static void closeQuietly(XMLStreamWriter xmlWriter) {
+		if (xmlWriter != null) {
+			try {
+				xmlWriter.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			xmlWriter = null;
 		}
 	}
 
