@@ -1361,8 +1361,44 @@ public class DbUtilities {
 						returnMap.put(resultSet.getString("columnname"), new DbColumnType(type, characterLength, numericPrecision, numericScale, isNullable));
 					}
 				} else if (DbVendor.Firebird == dbVendor) {
-					//TODO
-					throw new Exception("Unsupported db vendor");
+					String sql = "SELECT rf.rdb$field_name AS column_name, f.rdb$field_type AS type, f.rdb$field_length AS length, f.rdb$field_scale AS scale"
+						+ " FROM rdb$fields f JOIN rdb$relation_fields rf ON rf.rdb$field_source = f.rdb$field_name WHERE rf.rdb$relation_name = ?";
+					preparedStatement = connection.prepareStatement(sql);
+					preparedStatement.setString(1, tableName.toUpperCase());
+					resultSet = preparedStatement.executeQuery();
+					while (resultSet.next()) {
+						long characterLength = resultSet.getLong("length");
+						if (resultSet.wasNull()) {
+							characterLength = -1;
+						}
+						int numericPrecision = resultSet.getInt("length");
+						if (resultSet.wasNull()) {
+							numericPrecision = -1;
+						}
+						int numericScale = resultSet.getInt("scale");
+						if (resultSet.wasNull()) {
+							numericScale = -1;
+						}
+						boolean isNullable = resultSet.getString("is_nullable").equalsIgnoreCase("yes");
+						
+						String dataType;
+						switch (resultSet.getInt("type")) {
+							case 7: dataType = "SMALLINT";
+							case 8: dataType = "INTEGER";
+							case 10: dataType = "FLOAT";
+							case 12: dataType = "DATE";
+							case 13: dataType = "TIME";
+							case 14: dataType = "CHAR";
+							case 16: dataType = "BIGINT";
+							case 27: dataType = "DOUBLE PRECISION";
+							case 35: dataType = "TIMESTAMP";
+							case 37: dataType = "VARCHAR";
+							case 261: dataType = "BLOB";
+							default: dataType = getTypeNameById(resultSet.getInt("type"));
+						}
+
+						returnMap.put(resultSet.getString("column_name"), new DbColumnType(dataType, characterLength, numericPrecision, numericScale, isNullable));
+					}
 				} else if (DbVendor.SQLite == dbVendor) {
 					String sql = "PRAGMA table_info(" + tableName + ")";
 					preparedStatement = connection.prepareStatement(sql);
@@ -2167,6 +2203,51 @@ public class DbUtilities {
 			}
 		} else {
 			throw new Exception("Cannot get datatype: " + dbVendor + "/" + simpleDataType);
+		}
+	}
+	
+	public static String getTypeNameById(int typeId) throws Exception {
+		switch (typeId) {
+			case Types.BIT: return "BIT";
+			case Types.TINYINT: return "TINYINT";
+			case Types.SMALLINT: return "SMALLINT";
+			case Types.INTEGER: return "INTEGER";
+			case Types.BIGINT: return "BIGINT";
+			case Types.FLOAT: return "FLOAT";
+			case Types.REAL: return "REAL";
+			case Types.DOUBLE: return "DOUBLE";
+			case Types.NUMERIC: return "NUMERIC";
+			case Types.DECIMAL: return "DECIMAL";
+			case Types.CHAR: return "CHAR";
+			case Types.VARCHAR: return "VARCHAR";
+			case Types.LONGVARCHAR: return "LONGVARCHAR";
+			case Types.DATE: return "DATE";
+			case Types.TIME: return "TIME";
+			case Types.TIMESTAMP: return "TIMESTAMP";
+			case Types.BINARY: return "BINARY";
+			case Types.VARBINARY: return "VARBINARY";
+			case Types.LONGVARBINARY: return "LONGVARBINARY";
+			case Types.NULL: return "NULL";
+			case Types.OTHER: return "OTHER";
+			case Types.JAVA_OBJECT: return "JAVA_OBJECT";
+			case Types.DISTINCT: return "DISTINCT";
+			case Types.STRUCT: return "STRUCT";
+			case Types.ARRAY: return "ARRAY";
+			case Types.BLOB: return "BLOB";
+			case Types.CLOB: return "CLOB";
+			case Types.REF: return "REF";
+			case Types.DATALINK: return "DATALINK";
+			case Types.BOOLEAN: return "BOOLEAN";
+			case Types.ROWID: return "ROWID";
+			case Types.NCHAR: return "NCHAR";
+			case Types.NVARCHAR: return "NVARCHAR";
+			case Types.LONGNVARCHAR: return "LONGNVARCHAR";
+			case Types.NCLOB: return "NCLOB";
+			case Types.SQLXML: return "SQLXML";
+			case Types.REF_CURSOR: return "REF_CURSOR";
+			case Types.TIME_WITH_TIMEZONE: return "TIME_WITH_TIMEZONE";
+			case Types.TIMESTAMP_WITH_TIMEZONE: return "TIMESTAMP_WITH_TIMEZONE";
+			default: throw new Exception("Unknown type id: " + typeId);
 		}
 	}
 }
