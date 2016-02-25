@@ -37,6 +37,13 @@ import de.soderer.utilities.DbColumnType.SimpleDataType;
 import de.soderer.utilities.collection.CaseInsensitiveMap;
 
 public class DbUtilities {
+	public static final String DOWNLOAD_LOCATION_MYSQL = "https://dev.mysql.com/downloads/connector/j/";
+	public static final String DOWNLOAD_LOCATION_ORACLE = "http://www.oracle.com/technetwork/apps-tech/jdbc-112010-090769.html";
+	public static final String DOWNLOAD_LOCATION_POSTGRESQL = "https://jdbc.postgresql.org/download.html";
+	public static final String DOWNLOAD_LOCATION_FIREBIRD = "http://www.firebirdsql.org/en/jdbc-driver";
+	public static final String DOWNLOAD_LOCATION_DERBY = "https://db.apache.org/derby/derby_downloads.html";
+	public static final String DOWNLOAD_LOCATION_SQLITE = "https://bitbucket.org/xerial/sqlite-jdbc/downloads";
+	public static final String DOWNLOAD_LOCATION_HSQL = "http://hsqldb.org/download";
 	
 	/**
 	 * In an Oracle DB the statement "SELECT CURRENT_TIMESTAMP FROM DUAL" return this special Oracle type "oracle.sql.TIMESTAMPTZ",
@@ -1361,43 +1368,59 @@ public class DbUtilities {
 						returnMap.put(resultSet.getString("columnname"), new DbColumnType(type, characterLength, numericPrecision, numericScale, isNullable));
 					}
 				} else if (DbVendor.Firebird == dbVendor) {
-					String sql = "SELECT rf.rdb$field_name AS column_name, f.rdb$field_type AS type, f.rdb$field_length AS length, f.rdb$field_scale AS scale"
+					String sql = "SELECT rf.rdb$field_name, f.rdb$field_type, f.rdb$field_sub_type, f.rdb$field_length, f.rdb$field_scale, f.rdb$null_flag"
 						+ " FROM rdb$fields f JOIN rdb$relation_fields rf ON rf.rdb$field_source = f.rdb$field_name WHERE rf.rdb$relation_name = ?";
 					preparedStatement = connection.prepareStatement(sql);
 					preparedStatement.setString(1, tableName.toUpperCase());
 					resultSet = preparedStatement.executeQuery();
 					while (resultSet.next()) {
-						long characterLength = resultSet.getLong("length");
+						long characterLength = resultSet.getLong("rdb$field_length");
 						if (resultSet.wasNull()) {
 							characterLength = -1;
 						}
-						int numericPrecision = resultSet.getInt("length");
+						int numericPrecision = resultSet.getInt("rdb$field_length");
 						if (resultSet.wasNull()) {
 							numericPrecision = -1;
 						}
-						int numericScale = resultSet.getInt("scale");
+						int numericScale = resultSet.getInt("rdb$field_scale");
 						if (resultSet.wasNull()) {
 							numericScale = -1;
 						}
-						boolean isNullable = resultSet.getString("is_nullable").equalsIgnoreCase("yes");
+						boolean isNullable = resultSet.getObject("rdb$null_flag") == null;
 						
 						String dataType;
-						switch (resultSet.getInt("type")) {
+						switch (resultSet.getInt("rdb$field_type")) {
 							case 7: dataType = "SMALLINT";
+								break;
 							case 8: dataType = "INTEGER";
+								break;
 							case 10: dataType = "FLOAT";
+								break;
 							case 12: dataType = "DATE";
+								break;
 							case 13: dataType = "TIME";
+								break;
 							case 14: dataType = "CHAR";
+								break;
 							case 16: dataType = "BIGINT";
+								break;
 							case 27: dataType = "DOUBLE PRECISION";
+								break;
 							case 35: dataType = "TIMESTAMP";
+								break;
 							case 37: dataType = "VARCHAR";
-							case 261: dataType = "BLOB";
-							default: dataType = getTypeNameById(resultSet.getInt("type"));
+								break;
+							case 261:
+								if (resultSet.getInt("rdb$field_sub_type") == 1) {
+									dataType = "CLOB";
+								} else {
+									dataType = "BLOB";
+								}
+								break;
+							default: dataType = getTypeNameById(resultSet.getInt("rdb$field_type"));
 						}
 
-						returnMap.put(resultSet.getString("column_name"), new DbColumnType(dataType, characterLength, numericPrecision, numericScale, isNullable));
+						returnMap.put(resultSet.getString("rdb$field_name").trim(), new DbColumnType(dataType, characterLength, numericPrecision, numericScale, isNullable));
 					}
 				} else if (DbVendor.SQLite == dbVendor) {
 					String sql = "PRAGMA table_info(" + tableName + ")";
@@ -2248,6 +2271,26 @@ public class DbUtilities {
 			case Types.TIME_WITH_TIMEZONE: return "TIME_WITH_TIMEZONE";
 			case Types.TIMESTAMP_WITH_TIMEZONE: return "TIMESTAMP_WITH_TIMEZONE";
 			default: throw new Exception("Unknown type id: " + typeId);
+		}
+	}
+
+	public static String getDownloadUrl(DbVendor dbVendor) throws Exception {
+		if (dbVendor == DbVendor.MySQL) {
+			return DOWNLOAD_LOCATION_MYSQL;
+		} else if (dbVendor == DbVendor.Oracle) {
+			return DOWNLOAD_LOCATION_ORACLE;
+		} else if (dbVendor == DbVendor.PostgreSQL) {
+			return DOWNLOAD_LOCATION_POSTGRESQL;
+		} else if (dbVendor == DbVendor.Firebird) {
+			return DOWNLOAD_LOCATION_FIREBIRD;
+		} else if (dbVendor == DbVendor.Derby) {
+			return DOWNLOAD_LOCATION_DERBY;
+		} else if (dbVendor == DbVendor.SQLite) {
+			return DOWNLOAD_LOCATION_SQLITE;
+		} else if (dbVendor == DbVendor.HSQL) {
+			return DOWNLOAD_LOCATION_HSQL;
+		} else {
+			throw new Exception("Invalid db vendor");
 		}
 	}
 }

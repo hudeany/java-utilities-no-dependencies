@@ -1399,4 +1399,14 @@ public class Utilities {
 		}
 		return file.delete();
 	}
+
+	public static int limitValue(int minimum, int value, int maximum) {
+		if (value < minimum) {
+			return minimum;
+		} else if (maximum < value) {
+			return maximum;
+		} else {
+			return value;
+		}
+	}
 }
