@@ -1,6 +1,9 @@
 package de.soderer.utilities.json;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
@@ -189,6 +192,22 @@ public class Json5Reader extends JsonReader {
 			return identifierString;
 		} else {
 			throw new Exception("Invalid json identifier '" + Utilities.shortenStringToMaxLengthCutLeft(identifierString, 20) + "' at index " + getReadCharacters());
+		}
+	}
+	
+	/**
+	 * This method should only be used to read small Json items
+	 * 
+	 * @param data
+	 * @return
+	 * @throws IOException 
+	 * @throws UnsupportedEncodingException 
+	 */
+	public static JsonItem readJsonItemString(String data) throws Exception {
+		try (ByteArrayInputStream inputStream = new ByteArrayInputStream(data.getBytes("UTF-8"))) {
+			try (Json5Reader jsonReader = new Json5Reader(inputStream)) {
+				return jsonReader.read();
+			}
 		}
 	}
 }

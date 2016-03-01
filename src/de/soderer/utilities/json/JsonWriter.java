@@ -1,6 +1,7 @@
 package de.soderer.utilities.json;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -57,6 +58,22 @@ public class JsonWriter implements Closeable {
 		this.indention = Character.toString(indentationCharacter);
 	}
 	
+	public String getLinebreak() {
+		return linebreak;
+	}
+
+	public void setLinebreak(String linebreak) {
+		this.linebreak = linebreak;
+	}
+
+	public String getSeparator() {
+		return separator;
+	}
+
+	public void setSeparator(String separator) {
+		this.separator = separator;
+	}
+
 	public void setUglify(boolean value) {
 		if (value) {
 			linebreak = "";
@@ -349,5 +366,42 @@ public class JsonWriter implements Closeable {
 				// Do nothing
 			}
 		}
+	}
+	
+	/**
+	 * This method should only be used to read small Json items
+	 * 
+	 * @param jsonItem
+	 * @return
+	 * @throws Exception
+	 */
+	public static String getJsonItemString(JsonItem jsonItem) throws Exception {
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		try (JsonWriter jsonWriter = new JsonWriter(outputStream, "UTF-8")) {
+			jsonWriter.add(jsonItem);
+			jsonWriter.close();
+		}
+		
+		return outputStream.toString("UTF-8");
+	}
+	
+	/**
+	 * This method should only be used to read small Json items
+	 * 
+	 * @param jsonItem
+	 * @return
+	 * @throws Exception
+	 */
+	public static String getJsonItemString(JsonItem jsonItem, String linebreak, String indentation, String separator) throws Exception {
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		try (JsonWriter jsonWriter = new JsonWriter(outputStream, "UTF-8")) {
+			jsonWriter.setLinebreak(linebreak);
+			jsonWriter.setIndentation(indentation);
+			jsonWriter.setSeparator(separator);
+			jsonWriter.add(jsonItem);
+			jsonWriter.close();
+		}
+		
+		return outputStream.toString("UTF-8");
 	}
 }
