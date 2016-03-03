@@ -42,7 +42,10 @@ public class JsonReader extends BasicReader {
 	
 	public JsonToken readNextToken() throws Exception {
 		currentObject = null;
-		char currentChar = readNextNonWhitespace();
+		Character currentChar = readNextNonWhitespace();
+		if (currentChar == null) {
+			throw new Exception("Premature end of data");
+		}
 		switch (currentChar) {
 			case '{': // Open JsonObject
 				if (openJsonItems.size() > 0 && openJsonItems.peek() == JsonToken.JsonObject_PropertyKey) {

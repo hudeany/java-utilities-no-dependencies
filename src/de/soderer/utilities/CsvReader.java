@@ -302,14 +302,14 @@ public class CsvReader extends BasicReader {
 		List<String> returnList = new ArrayList<String>();
 		StringBuilder nextValue = new StringBuilder();
 		boolean insideString = false;
-		int nextCharInt = -1;
-		int previousCharInt = -1;
+		Character nextCharacter;
+		char previousCharacter = (char) -1;
 		
-		while ((nextCharInt = readNextInt()) != -1) {
-			char nextChar = (char) nextCharInt;
+		while ((nextCharacter = readNextCharacter()) != null) {
+			char nextChar = (char) nextCharacter;
 			if (useStringQuote && nextChar == stringQuote) {
 				if (stringQuoteEscapeCharacter != stringQuote) {
-					if (previousCharInt != stringQuoteEscapeCharacter) {
+					if (previousCharacter != stringQuoteEscapeCharacter) {
 						insideString = !insideString;
 					}
 				} else {
@@ -318,7 +318,7 @@ public class CsvReader extends BasicReader {
 				nextValue.append(nextChar);
 			} else if (!insideString) {
 				if (nextChar == '\r' || nextChar == '\n') {
-					if (nextValue.length() > 0 || previousCharInt == separator) {
+					if (nextValue.length() > 0 || previousCharacter == separator) {
 						returnList.add(parseValue(nextValue.toString()));
 					}
 
@@ -349,14 +349,14 @@ public class CsvReader extends BasicReader {
 				}
 			}
 
-			previousCharInt = nextCharInt;
+			previousCharacter = nextCharacter;
 		}
 
 		if (insideString) {
 			close();
 			throw new IOException("Unexpected end of data after quoted csv-value was started");
 		} else {
-			if (nextValue.length() > 0 || previousCharInt == separator) {
+			if (nextValue.length() > 0 || previousCharacter == separator) {
 				returnList.add(parseValue(nextValue.toString()));
 			}
 
@@ -376,14 +376,6 @@ public class CsvReader extends BasicReader {
 				close();
 				return null;
 			}
-		}
-	}
-	
-	private int readNextInt() {
-		try {
-			return super.readNextCharacter();
-		} catch (IOException e) {
-			return -1;
 		}
 	}
 
@@ -424,10 +416,10 @@ public class CsvReader extends BasicReader {
 	 */
 	private String parseValue(String rawValue) throws CsvDataException {
 		String returnValue = rawValue;
-		String stringQuoteString = Character.toString(stringQuote);
 
 		if (isNotEmpty(returnValue)) {
 			if (useStringQuote) {
+				String stringQuoteString = Character.toString(stringQuote);
 				if (returnValue.contains(stringQuoteString)) {
 					returnValue = returnValue.trim();
 				}

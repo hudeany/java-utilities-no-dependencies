@@ -20,16 +20,12 @@ public abstract class BasicReader implements Closeable {
 	/** Input reader. */
 	private BufferedReader inputReader = null;
 	
-	private char currentChar;
+	private Character currentChar;
 	private Character reuseChar = null;
 	private long readCharacters = 0;
 
 	public BasicReader(InputStream inputStream) throws Exception {
 		this(inputStream, (String) null);
-	}
-	
-	public long getReadCharacters() {
-		return readCharacters;
 	}
 	
 	public BasicReader(InputStream inputStream, String encoding) throws Exception {
@@ -39,10 +35,13 @@ public abstract class BasicReader implements Closeable {
 	public BasicReader(InputStream inputStream, Charset encodingCharset) throws Exception {
 		if (inputStream == null) {
 			throw new Exception("Invalid empty inputStream");
-			
 		}
 		this.inputStream = inputStream;
 		this.encoding = encodingCharset == null ? Charset.forName(DEFAULT_ENCODING) : encodingCharset;
+	}
+	
+	public long getReadCharacters() {
+		return readCharacters;
 	}
 	
 	public void reuseCurrentChar() {
@@ -50,7 +49,7 @@ public abstract class BasicReader implements Closeable {
 		readCharacters--;
 	}
 
-	protected char readNextCharacter() throws IOException {
+	protected Character readNextCharacter() throws IOException {
 		if (inputReader == null) {
 			if (inputStream == null) {
 				throw new IllegalStateException("Reader is already closed");
@@ -73,16 +72,17 @@ public abstract class BasicReader implements Closeable {
 				
 				currentChar = (char) currentCharInt;
 				readCharacters++;
-				return currentChar;
 			} else {
-				throw new IOException("Premature end of data");
+				currentChar = null;
 			}
+			
+			return currentChar;
 		}
 	}
 
-	protected char readNextNonWhitespace() throws Exception {
+	protected Character readNextNonWhitespace() throws Exception {
 		readNextCharacter();
-		while (Character.isWhitespace(currentChar) ) {
+		while (currentChar != null && Character.isWhitespace(currentChar) ) {
 			readNextCharacter();
 		}
 		return currentChar;
