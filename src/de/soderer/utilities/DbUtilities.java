@@ -1898,11 +1898,43 @@ public class DbUtilities {
 				}
 				
 				DatabaseMetaData metaData = connection.getMetaData();
-				resultSet = metaData.getPrimaryKeys(null, null, tableName);
+				resultSet = metaData.getPrimaryKeys(connection.getCatalog(), null, tableName);
 
 				List<String> returnList = new ArrayList<String>();
 				while (resultSet.next()) {
 					returnList.add(resultSet.getString("COLUMN_NAME"));
+				}
+				return returnList;
+			} catch (Exception e) {
+				throw new RuntimeException("Cannot read primarykey columns for table " + tableName + ": " + e.getMessage(), e);
+			} finally {
+				closeQuietly(resultSet);
+				resultSet = null;
+			}
+		}
+	}
+
+	public static List<List<String>> getForeignKeys(Connection connection, String tableName) {
+		if (Utilities.isBlank(tableName)) {
+			return null;
+		} else {
+			ResultSet resultSet = null;
+			try {
+				if (getDbVendor(connection) == DbVendor.Oracle || getDbVendor(connection) == DbVendor.HSQL || getDbVendor(connection) == DbVendor.Derby) {
+					tableName = tableName.toUpperCase();
+				}
+				
+				DatabaseMetaData metaData = connection.getMetaData();
+				resultSet = metaData.getImportedKeys(connection.getCatalog(), null, tableName);
+
+				List<List<String>> returnList = new ArrayList<List<String>>();
+				while (resultSet.next()) {
+					List<String> nextForeignKey = new ArrayList<String>();
+					nextForeignKey.add(resultSet.getString("FKTABLE_NAME"));
+					nextForeignKey.add(resultSet.getString("FKCOLUMN_NAME"));
+					nextForeignKey.add(resultSet.getString("PKTABLE_NAME"));
+					nextForeignKey.add(resultSet.getString("PKCOLUMN_NAME"));
+					returnList.add(nextForeignKey);
 				}
 				return returnList;
 			} catch (Exception e) {
