@@ -6,15 +6,15 @@ public class DbColumnType {
 	}
 
 	private String typeName;
-	private long characterLength; // only for VARCHAR and VARCHAR2 types
+	private long characterByteSize; // only for VARCHAR and VARCHAR2 types
 	private int numericPrecision; // only for numeric types
 	private int numericScale; // only for numeric types
 	private boolean nullable;
 	private boolean autoIncrement;
 
-	public DbColumnType(String typeName, long characterLength, int numericPrecision, int numericScale, boolean nullable, boolean autoIncrement) {
+	public DbColumnType(String typeName, long characterByteSize, int numericPrecision, int numericScale, boolean nullable, boolean autoIncrement) {
 		this.typeName = typeName;
-		this.characterLength = characterLength;
+		this.characterByteSize = characterByteSize;
 		this.numericPrecision = numericPrecision;
 		this.numericScale = numericScale;
 		this.nullable = nullable;
@@ -25,8 +25,8 @@ public class DbColumnType {
 		return typeName;
 	}
 
-	public long getCharacterLength() {
-		return characterLength;
+	public long getCharacterByteSize() {
+		return characterByteSize;
 	}
 
 	public int getNumericPrecision() {
@@ -60,5 +60,15 @@ public class DbColumnType {
 			// e.g.: PostgreSQL "REAL"
 			return SimpleDataType.Double;
 		}
+	}
+	
+	@Override
+	public String toString() {
+		SimpleDataType simpleDataType = getSimpleDataType();
+		return typeName
+				+ (simpleDataType == SimpleDataType.String ? "(" + characterByteSize + ")" : "")
+				+ (simpleDataType == SimpleDataType.Integer || simpleDataType == SimpleDataType.Double ? "(" + numericPrecision + ", " + numericScale + ")" : "")
+				+ (nullable ? " nullable": " not nullable")
+				+ (autoIncrement ? " autoIncrement": "");
 	}
 }

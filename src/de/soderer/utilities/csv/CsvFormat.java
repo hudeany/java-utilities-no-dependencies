@@ -1,4 +1,4 @@
-package de.soderer.utilities;
+package de.soderer.utilities.csv;
 
 public class CsvFormat {
 	/** The Constant DEFAULT_SEPARATOR. */
@@ -71,7 +71,7 @@ public class CsvFormat {
 	public CsvFormat() {
 	}
 	
-	public CsvFormat(char separator, char stringQuote, char stringQuoteEscapeCharacter, boolean useStringQuote, boolean lineBreakInDataAllowed, boolean escapedStringQuoteInDataAllowed, boolean fillMissingTrailingColumnsWithNull, boolean alwaysTrim, QuoteMode quoteMode, String lineBreak) {
+	public CsvFormat(char separator, char stringQuote, char stringQuoteEscapeCharacter, boolean lineBreakInDataAllowed, boolean escapedStringQuoteInDataAllowed, boolean fillMissingTrailingColumnsWithNull, boolean alwaysTrim, QuoteMode quoteMode, String lineBreak) {
 		this.separator = separator;
 		this.stringQuote = stringQuote;
 		this.stringQuoteEscapeCharacter = stringQuoteEscapeCharacter;
@@ -81,6 +81,17 @@ public class CsvFormat {
 		this.alwaysTrim = alwaysTrim;
 		this.quoteMode = quoteMode;
 		this.lineBreak = lineBreak;
+		
+		// Use setters to validate parameters
+		setSeparator(separator);
+		setStringQuote(stringQuote);
+		setStringQuoteEscapeCharacter(stringQuoteEscapeCharacter);
+		setLineBreakInDataAllowed(lineBreakInDataAllowed);
+		setEscapedStringQuoteInDataAllowed(escapedStringQuoteInDataAllowed);
+		setFillMissingTrailingColumnsWithNull(fillMissingTrailingColumnsWithNull);
+		setAlwaysTrim(alwaysTrim);
+		setQuoteMode(quoteMode);
+		setLineBreak(lineBreak);
 	}
 
 	public char getSeparator() {
@@ -88,13 +99,14 @@ public class CsvFormat {
 	}
 
 	public CsvFormat setSeparator(char separator) {
-		this.separator = separator;
 		if (separator == '\r' || separator == '\n') {
 			throw new IllegalArgumentException("Separator '" + separator + "' is invalid");
 		} else if (quoteMode != QuoteMode.NO_QUOTE && separator == stringQuote) {
 			throw new IllegalArgumentException("Separator '" + separator + "' is invalid");
+		} else {
+			this.separator = separator;
+			return this;
 		}
-		return this;
 	}
 
 	public char getStringQuote() {
@@ -109,18 +121,18 @@ public class CsvFormat {
 	 */
 	public CsvFormat setStringQuote(Character stringQuote) {
 		if (stringQuote != null) {
-			this.stringQuote = stringQuote;
-			stringQuoteEscapeCharacter = stringQuote;
-			quoteMode = QuoteMode.QUOTE_IF_NEEDED;
-			
 			if (stringQuote == '\r' || stringQuote == '\n' || separator == stringQuote) {
 				throw new IllegalArgumentException("StringQuote '" + stringQuote + "' is invalid");
+			} else {
+				this.stringQuote = stringQuote;
+				stringQuoteEscapeCharacter = stringQuote;
+				quoteMode = QuoteMode.QUOTE_IF_NEEDED;
+				return this;
 			}
 		} else {
 			quoteMode = QuoteMode.NO_QUOTE;
+			return this;
 		}
-		
-		return this;
 	}
 
 	public char getStringQuoteEscapeCharacter() {
@@ -128,11 +140,12 @@ public class CsvFormat {
 	}
 
 	public CsvFormat setStringQuoteEscapeCharacter(char stringQuoteEscapeCharacter) {
-		this.stringQuoteEscapeCharacter = stringQuoteEscapeCharacter;
 		if (stringQuoteEscapeCharacter == separator || stringQuoteEscapeCharacter == '\r' || stringQuoteEscapeCharacter == '\n') {
 			throw new IllegalArgumentException("Stringquote escape character '" + stringQuoteEscapeCharacter + "' is invalid");
+		} else {
+			this.stringQuoteEscapeCharacter = stringQuoteEscapeCharacter;
+			return this;
 		}
-		return this;
 	}
 
 	public boolean isLineBreakInDataAllowed() {
@@ -176,11 +189,12 @@ public class CsvFormat {
 	}
 
 	public CsvFormat setQuoteMode(QuoteMode quoteMode) {
-		this.quoteMode = quoteMode;
 		if (quoteMode != QuoteMode.NO_QUOTE && separator == stringQuote) {
 			throw new IllegalArgumentException("StringQuote '" + stringQuote + "' is invalid");
+		} else {
+			this.quoteMode = quoteMode;
+			return this;
 		}
-		return this;
 	}
 
 	public String getLineBreak() {
@@ -188,10 +202,11 @@ public class CsvFormat {
 	}
 
 	public CsvFormat setLineBreak(String lineBreak) {
-		this.lineBreak = lineBreak;
 		if (!lineBreak.equals("\r") && !lineBreak.equals("\n") && !lineBreak.equals("\r\n")) {
 			throw new IllegalArgumentException("Given linebreak is invalid");
+		} else {
+			this.lineBreak = lineBreak;
+			return this;
 		}
-		return this;
 	}
 }

@@ -1,4 +1,4 @@
-package de.soderer.utilities;
+package de.soderer.utilities.json;
 
 import java.io.BufferedReader;
 import java.io.Closeable;
